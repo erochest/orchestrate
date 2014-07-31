@@ -6,6 +6,7 @@ init:
 	make deps
 
 test: build
+	cabal test --test-option=--color
 
 run:
 	cabal run
