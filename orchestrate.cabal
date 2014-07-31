@@ -16,7 +16,14 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  -- exposed-modules:     
+  exposed-modules:     Database.Orchestrate
+                     , Database.Orchestrate.Events
+                     , Database.Orchestrate.Graph
+                     , Database.Orchestrate.KeyValue
+                     , Database.Orchestrate.Network
+                     , Database.Orchestrate.Search
+                     , Database.Orchestrate.Types
+                     , Database.Orchestrate.Utils
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.7 && <4.8
