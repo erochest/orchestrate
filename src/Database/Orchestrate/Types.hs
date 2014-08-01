@@ -3,6 +3,8 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
+-- TODO: Lensify all the things.
+
 
 module Database.Orchestrate.Types
     ( APIKey
@@ -45,8 +47,8 @@ import           Control.Monad
 import           Control.Monad.Error.Class
 import           Control.Monad.Identity
 import           Control.Monad.Reader
-import           Control.Monad.Trans
 import           Data.Aeson
+import           Data.Default
 import qualified Data.Text                 as T
 
 
@@ -76,6 +78,9 @@ data Session = Session
              , sessionKey     :: !APIKey
              , sessionVersion :: !Int
              } deriving (Show)
+
+instance Default Session where
+    def = Session "https://api.orchestrate.io" "" 0
 
 class (ToJSON a, FromJSON a) => OrchestrateData a where
     tableName :: a -> T.Text
