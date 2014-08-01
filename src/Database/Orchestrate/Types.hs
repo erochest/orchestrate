@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
 
@@ -22,6 +23,7 @@ module Database.Orchestrate.Types
     , OrchestrateT(..)
     , OrchestrateIO
     , Orchestrate
+    , runO
 
     , ResultList(..)
     , ResultItem(..)
@@ -34,6 +36,7 @@ import           Control.Error
 import           Control.Monad
 import           Control.Monad.Identity
 import           Control.Monad.Reader
+import           Control.Monad.Trans
 import           Data.Aeson
 import qualified Data.Text              as T
 
@@ -71,6 +74,21 @@ class (ToJSON a, FromJSON a) => OrchestrateData a where
 newtype OrchestrateT m a
     = OrchestrateT { runOrchestrate :: EitherT T.Text (ReaderT Session m) a }
     deriving (Functor, Applicative, Monad)
+
+runO :: Monad m => OrchestrateT m a -> Session -> m (Either T.Text a)
+runO m s = runReaderT (runEitherT $ runOrchestrate m) s
+
+instance MonadTrans OrchestrateT where
+    lift = OrchestrateT . lift . lift
+
+instance MonadIO m => MonadIO (OrchestrateT m) where
+    liftIO = OrchestrateT . liftIO . liftIO
+
+instance Monad m => MonadReader Session (OrchestrateT m) where
+    ask     = OrchestrateT . lift $ ask
+    local f = OrchestrateT . local f . runOrchestrate
+
+-- TODO: Need to define this for other monad classes.
 
 type Orchestrate   = OrchestrateT Identity
 type OrchestrateIO = OrchestrateT IO
