@@ -25,6 +25,14 @@ module Database.Orchestrate.Types
     , Orchestrate
     , runO
 
+    , ask
+    , asks
+
+    , io
+
+    , throwError
+    , catchError
+
     , ResultList(..)
     , ResultItem(..)
     , Path(..)
@@ -34,11 +42,12 @@ module Database.Orchestrate.Types
 import           Control.Applicative
 import           Control.Error
 import           Control.Monad
+import           Control.Monad.Error.Class
 import           Control.Monad.Identity
 import           Control.Monad.Reader
 import           Control.Monad.Trans
 import           Data.Aeson
-import qualified Data.Text              as T
+import qualified Data.Text                 as T
 
 
 type APIKey     = T.Text
@@ -63,7 +72,8 @@ data RangeEnd a = Inclusive a
                 deriving (Show, Functor)
 
 data Session = Session
-             { sessionKey     :: !APIKey
+             { sessionURL     :: !T.Text
+             , sessionKey     :: !APIKey
              , sessionVersion :: !Int
              } deriving (Show)
 
@@ -88,7 +98,20 @@ instance Monad m => MonadReader Session (OrchestrateT m) where
     ask     = OrchestrateT . lift $ ask
     local f = OrchestrateT . local f . runOrchestrate
 
+io :: MonadIO m => IO a -> OrchestrateT m a
+io = OrchestrateT . fmapLT (T.pack . show) . syncIO
+
 -- TODO: Need to define this for other monad classes.
+
+instance Monad m => MonadError T.Text (OrchestrateT m) where
+    throwError = OrchestrateT . EitherT . return . Left
+    catchError a handler =
+        join . fmap (handler' handler) . lift . runO a =<< ask
+
+handler' :: Monad m
+         => (T.Text -> OrchestrateT m a) -> Either T.Text a -> OrchestrateT m a
+handler' _ (Right v) = return v
+handler' f (Left e)  = f e
 
 type Orchestrate   = OrchestrateT Identity
 type OrchestrateIO = OrchestrateT IO
