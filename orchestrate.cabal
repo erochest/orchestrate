@@ -18,10 +18,12 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Database.Orchestrate
+                     , Database.Orchestrate.Collection
                      , Database.Orchestrate.Events
                      , Database.Orchestrate.Graph
                      , Database.Orchestrate.KeyValue
                      , Database.Orchestrate.Network
+                     , Database.Orchestrate.Ref
                      , Database.Orchestrate.Search
                      , Database.Orchestrate.Types
                      , Database.Orchestrate.Utils
@@ -31,6 +33,9 @@ library
                      , text
                      , wreq
                      , aeson
+                     , unordered-containers
+                     , errors
+                     , mtl
   -- hs-source-dirs:      
   default-language:    Haskell2010
 
