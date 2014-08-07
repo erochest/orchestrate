@@ -2,9 +2,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# OPTIONS_GHC -Wall #-}
-
--- TODO: Lensify all the things.
 
 
 module Database.Orchestrate.Types
@@ -22,6 +21,9 @@ module Database.Orchestrate.Types
     , Offset
 
     , Session(..)
+    , sessionURL
+    , sessionKey
+    , sessionVersion
     , OrchestrateData(..)
     , OrchestrateT(..)
     , OrchestrateIO
@@ -38,20 +40,31 @@ module Database.Orchestrate.Types
     , catchError
 
     , ResultList(..)
+    , resultCount
+    , resultList
+    , resultPrev
+    , resultNext
+
     , ResultItem(..)
+    , itemPath
+    , itemValue
+
     , Path(..)
+    , itemCollection
+    , itemKey
+    , itemRef
     ) where
 
 
 import           Control.Applicative
 import           Control.Error
+import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Error.Class
-import           Control.Monad.Identity
 import           Control.Monad.Reader
 import           Data.Aeson
 import           Data.Default
-import qualified Data.Text                  as T
+import qualified Data.Text                 as T
 
 
 type APIKey     = T.Text
@@ -77,10 +90,11 @@ data RangeEnd a = Inclusive a
 
 -- TODO: store the default Options here.
 data Session = Session
-             { sessionURL     :: !T.Text
-             , sessionKey     :: !APIKey
-             , sessionVersion :: !Int
+             { _sessionURL     :: !T.Text
+             , _sessionKey     :: !APIKey
+             , _sessionVersion :: !Int
              } deriving (Show)
+$(makeLenses ''Session)
 
 instance Default Session where
     def = Session "https://api.orchestrate.io" "" 0
@@ -128,10 +142,11 @@ type Orchestrate   = OrchestrateT Identity
 type OrchestrateIO = OrchestrateT IO
 
 data Path = Path
-          { itemCollection :: !T.Text
-          , itemKey        :: !T.Text
-          , itemRef        :: !T.Text
+          { _itemCollection :: !T.Text
+          , _itemKey        :: !T.Text
+          , _itemRef        :: !T.Text
           } deriving (Show)
+$(makeLenses ''Path)
 
 instance FromJSON Path where
     parseJSON (Object o) =   Path
@@ -141,11 +156,12 @@ instance FromJSON Path where
     parseJSON _          =   mzero
 
 data ResultList i = ResultList
-                  { resultCount :: !Int
-                  , resultList  :: ![i]
-                  , resultPrev  :: !(Maybe Location)
-                  , resultNext  :: !(Maybe Location)
+                  { _resultCount :: !Int
+                  , _resultList  :: ![i]
+                  , _resultPrev  :: !(Maybe Location)
+                  , _resultNext  :: !(Maybe Location)
                   } deriving (Show)
+$(makeLenses ''ResultList)
 
 instance FromJSON r => FromJSON (ResultList r) where
     parseJSON (Object o) =   ResultList
@@ -156,9 +172,10 @@ instance FromJSON r => FromJSON (ResultList r) where
     parseJSON _          =   mzero
 
 data ResultItem p v = ResultItem
-                    { resultItemPath  :: !p
-                    , resultItemValue :: !v
+                    { _itemPath  :: !p
+                    , _itemValue :: !v
                     } deriving (Show)
+$(makeLenses ''ResultItem)
 
 instance (FromJSON p, FromJSON v) => FromJSON (ResultItem p v) where
     parseJSON (Object o) =   ResultItem

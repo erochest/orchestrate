@@ -45,12 +45,12 @@ ping = checkResponse =<< api [] [] Nothing headWith
 baseUrl :: Monad m => OrchestrateT m T.Text
 baseUrl = do
     Session{..} <- ask
-    return $ mconcat [sessionURL, "/v", T.pack (show sessionVersion)]
+    return $ mconcat [_sessionURL, "/v", tshow _sessionVersion]
 
 authOptions :: Monad m => OrchestrateT m Options
 authOptions = do
-    key <- asks sessionKey
-    return $ defaults & auth .~ basicAuth (E.encodeUtf8 key) ""
+    key <- E.encodeUtf8 <$> asks _sessionKey
+    return $ defaults & auth .~ basicAuth key ""
                       & header "Content-Type" .~ ["application/json"]
                       & header "Accept"       .~ ["application/json"]
 
@@ -84,7 +84,7 @@ api' paths pairs o f = do
 envSession :: IO Session
 envSession = do
     key <- T.pack <$> getEnv "ORCHESTRATE_API"
-    return $ def { sessionKey = key }
+    return $ def & sessionKey .~ key
 
 rot :: (a -> b -> c -> d) -> c -> a -> b -> d
 rot f c a b = f a b c

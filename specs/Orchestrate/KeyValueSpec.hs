@@ -82,6 +82,6 @@ spec = describe "Database.Orchestrate.KeyValue" $ do
             r' <- run $ listKV "test-coll" Nothing (Open, Open)
             r' `shouldSatisfy` isRight
             let Right kvl = r'
-            resultCount kvl `shouldBe` 3
-            L.sort (map (name . resultItemValue) (resultList kvl)) `shouldBe` names
+            _resultCount kvl `shouldBe` 3
+            L.sort (map (name . _itemValue) (_resultList kvl)) `shouldBe` names
             void . run $ mapM_ ((`purgeKV` Nothing) . (`Person` undefined)) names
