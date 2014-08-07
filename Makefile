@@ -8,6 +8,9 @@ init:
 test: build
 	cabal test --test-option=--color
 
+spec: build
+	./dist/build/orchestrate-specs/orchestrate-specs
+
 run:
 	cabal run
 

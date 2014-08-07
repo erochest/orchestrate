@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# OPTIONS_GHC -Wall #-}
 
 -- TODO: Lensify all the things.
 
@@ -16,7 +17,7 @@ module Database.Orchestrate.Types
     , IfMatch
     , IfMatch'(..)
     , Range
-    , RangeEnd
+    , RangeEnd(..)
     , Limit
     , Offset
 
@@ -26,6 +27,7 @@ module Database.Orchestrate.Types
     , OrchestrateIO
     , Orchestrate
     , runO
+    , orchestrateEither
 
     , ask
     , asks
@@ -49,7 +51,7 @@ import           Control.Monad.Identity
 import           Control.Monad.Reader
 import           Data.Aeson
 import           Data.Default
-import qualified Data.Text                 as T
+import qualified Data.Text                  as T
 
 
 type APIKey     = T.Text
@@ -73,6 +75,7 @@ data RangeEnd a = Inclusive a
                 | Open
                 deriving (Show, Functor)
 
+-- TODO: store the default Options here.
 data Session = Session
              { sessionURL     :: !T.Text
              , sessionKey     :: !APIKey
@@ -118,6 +121,9 @@ handler' :: Monad m
 handler' _ (Right v) = return v
 handler' f (Left e)  = f e
 
+orchestrateEither :: Monad m => Either T.Text a -> OrchestrateT m a
+orchestrateEither = OrchestrateT . hoistEither
+
 type Orchestrate   = OrchestrateT Identity
 type OrchestrateIO = OrchestrateT IO
 
@@ -143,10 +149,10 @@ data ResultList i = ResultList
 
 instance FromJSON r => FromJSON (ResultList r) where
     parseJSON (Object o) =   ResultList
-                         <$> o .: "count"
-                         <*> o .: "results"
-                         <*> o .: "prev"
-                         <*> o .: "next"
+                         <$> o .:  "count"
+                         <*> o .:  "results"
+                         <*> o .:? "prev"
+                         <*> o .:? "next"
     parseJSON _          =   mzero
 
 data ResultItem p v = ResultItem

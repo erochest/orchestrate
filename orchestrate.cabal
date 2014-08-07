@@ -32,12 +32,17 @@ library
   build-depends:       base >=4.7 && <4.8
                      , text
                      , wreq
+                     , http-client
                      , aeson
                      , unordered-containers
                      , errors
+                     , either
                      , mtl
                      , lens
                      , data-default
+                     , bytestring
+                     , case-insensitive
+                     , transformers
   -- hs-source-dirs:      
   default-language:    Haskell2010
 
@@ -47,11 +52,15 @@ test-suite orchestrate-specs
   hs-source-dirs:      specs
   main-is:             Specs.hs
   build-depends:         base       == 4.7.*
+                       , orchestrate
                        , QuickCheck
                        , smallcheck
                        , hspec
+                       , lens
+                       , text
+                       , aeson
+                       , bytestring
   default-language:    Haskell2010
-
 
 source-repository this
   type:                git
