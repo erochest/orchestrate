@@ -4,12 +4,10 @@
 module Orchestrate.KeyValueSpec where
 
 
-import Control.Lens hiding ((.=))
-import qualified Data.List as L
-import           Control.Applicative
+import           Control.Lens                  hiding ((.=))
 import           Control.Monad
-import           Data.Aeson
 import           Data.Either
+import qualified Data.List                     as L
 import qualified Data.Text                     as T
 
 import           Test.Hspec
@@ -18,29 +16,10 @@ import           Database.Orchestrate.KeyValue
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
+import           Orchestrate.Spec.Types
+
 
 -- TODO: Use a proxy to cache results for testing
-
-
-data Person = Person
-            { name :: T.Text
-            , age  :: Int
-            } deriving (Eq, Show)
-
-instance FromJSON Person where
-    parseJSON (Object o) =   Person
-                         <$> o .: "name"
-                         <*> o .: "age"
-    parseJSON _          = mzero
-
-instance ToJSON Person where
-    toJSON (Person n a) = object [ "name" .= n
-                                 , "age"  .= a
-                                 ]
-
-instance OrchestrateData Person where
-    tableName _          = "test-coll"
-    dataKey (Person n _) = n
 
 
 run :: OrchestrateIO m -> IO (Either T.Text m)
