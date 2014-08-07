@@ -24,11 +24,12 @@ module Database.Orchestrate.Types
     , sessionURL
     , sessionKey
     , sessionVersion
+    , sessionOptions
+
     , OrchestrateData(..)
     , OrchestrateT(..)
     , OrchestrateIO
     , Orchestrate
-    , runO
     , orchestrateEither
 
     , ask
@@ -65,6 +66,7 @@ import           Control.Monad.Reader
 import           Data.Aeson
 import           Data.Default
 import qualified Data.Text                 as T
+import           Network.Wreq
 
 
 type APIKey     = T.Text
@@ -88,16 +90,18 @@ data RangeEnd a = Inclusive a
                 | Open
                 deriving (Show, Functor)
 
--- TODO: store the default Options here.
 data Session = Session
              { _sessionURL     :: !T.Text
              , _sessionKey     :: !APIKey
              , _sessionVersion :: !Int
+             , _sessionOptions :: !Options
              } deriving (Show)
 $(makeLenses ''Session)
 
 instance Default Session where
     def = Session "https://api.orchestrate.io" "" 0
+        $ defaults & header "Content-Type" .~ ["application/json"]
+                   & header "Accept"       .~ ["application/json"]
 
 class (ToJSON a, FromJSON a) => OrchestrateData a where
     tableName :: a -> T.Text
@@ -106,9 +110,6 @@ class (ToJSON a, FromJSON a) => OrchestrateData a where
 newtype OrchestrateT m a
     = OrchestrateT { runOrchestrate :: EitherT T.Text (ReaderT Session m) a }
     deriving (Functor, Applicative, Monad)
-
-runO :: Monad m => OrchestrateT m a -> Session -> m (Either T.Text a)
-runO m s = runReaderT (runEitherT $ runOrchestrate m) s
 
 instance MonadTrans OrchestrateT where
     lift = OrchestrateT . lift . lift
@@ -127,8 +128,11 @@ io = OrchestrateT . fmapLT (T.pack . show) . syncIO
 
 instance Monad m => MonadError T.Text (OrchestrateT m) where
     throwError = OrchestrateT . EitherT . return . Left
-    catchError a handler =
-        join . fmap (handler' handler) . lift . runO a =<< ask
+    catchError a handler =   join
+                         .   fmap (handler' handler)
+                         .   lift
+                         .   runReaderT (runEitherT $ runOrchestrate a)
+                         =<< ask
 
 handler' :: Monad m
          => (T.Text -> OrchestrateT m a) -> Either T.Text a -> OrchestrateT m a

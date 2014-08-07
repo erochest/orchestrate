@@ -44,7 +44,7 @@ instance OrchestrateData Person where
 
 
 run :: OrchestrateIO m -> IO (Either T.Text m)
-run m = envSession >>= runO m
+run m = envSession >>= runO' m
 
 getPerson :: Key -> IO (Either T.Text (Maybe Person))
 getPerson = run . getKV "test-coll"

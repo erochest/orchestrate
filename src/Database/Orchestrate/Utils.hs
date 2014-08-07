@@ -2,10 +2,14 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# OPTIONS_GHC -Wall #-}
 
+
 module Database.Orchestrate.Utils
     ( ping
+    , runO
+    , runO'
     , baseUrl
-    , authOptions
+    , withAuth'
+    , withAuth
     , api
     , api'
     , envSession
@@ -25,6 +29,7 @@ import           Control.Applicative
 import           Control.Error
 import           Control.Exception            as Ex
 import           Control.Lens
+import           Control.Monad.Reader
 import qualified Data.ByteString              as BS
 import           Data.CaseInsensitive
 import           Data.Default
@@ -42,17 +47,22 @@ import           Database.Orchestrate.Types
 ping :: OrchestrateIO ()
 ping = checkResponse =<< api [] [] Nothing headWith
 
+runO :: Monad m => OrchestrateT m a -> Session -> m (Either T.Text a)
+runO m s = runO' m $ over sessionOptions (withAuth $ s ^. sessionKey) s
+
+runO' :: Monad m => OrchestrateT m a -> Session -> m (Either T.Text a)
+runO' m = runReaderT (runEitherT $ runOrchestrate m)
+
 baseUrl :: Monad m => OrchestrateT m T.Text
 baseUrl = do
     Session{..} <- ask
     return $ mconcat [_sessionURL, "/v", tshow _sessionVersion]
 
-authOptions :: Monad m => OrchestrateT m Options
-authOptions = do
-    key <- E.encodeUtf8 <$> asks _sessionKey
-    return $ defaults & auth .~ basicAuth key ""
-                      & header "Content-Type" .~ ["application/json"]
-                      & header "Accept"       .~ ["application/json"]
+withAuth' :: APIKey -> Options
+withAuth' key = withAuth key defaults
+
+withAuth :: APIKey -> Options -> Options
+withAuth key o = o & auth .~ basicAuth (E.encodeUtf8 key) ""
 
 addp :: [T.Text] -> T.Text -> T.Text
 addp [] url = url
@@ -61,21 +71,18 @@ addp p  url = mconcat [url, "?", T.intercalate "&" p]
 buildUrl :: [T.Text] -> [T.Text] -> T.Text -> String
 buildUrl pr pt = T.unpack . addp pr . T.intercalate "/" . (:pt)
 
-addAuthOptions :: Monad m => Maybe (Options -> Options) -> OrchestrateT m Options
-addAuthOptions mf = fromMaybe id mf <$> authOptions
-
 api :: [T.Text] -> [T.Text] -> Maybe (Options -> Options)
     -> (Options -> String -> IO (Response a))
     -> OrchestrateIO (Response a)
 api paths pairs o f = do
-    opts <- addAuthOptions o
+    opts <- views sessionOptions $ fromMaybe id o
     io . f opts =<< fmap (buildUrl pairs paths) baseUrl
 
 api' :: [T.Text] -> [T.Text] -> Maybe (Options -> Options)
      -> (Options -> String -> IO (Response a))
      -> OrchestrateIO (Either Status (Response a))
 api' paths pairs o f = do
-    opts <- addAuthOptions o
+    opts <- views sessionOptions $ fromMaybe id o
     url  <- buildUrl pairs paths <$> baseUrl
     io $ fmap Right (f opts url) `Ex.catch` handler
     where handler (StatusCodeException s _ _) = return $ Left s
@@ -85,6 +92,7 @@ envSession :: IO Session
 envSession = do
     key <- T.pack <$> getEnv "ORCHESTRATE_API"
     return $ def & sessionKey .~ key
+                 & over sessionOptions (withAuth key)
 
 rot :: (a -> b -> c -> d) -> c -> a -> b -> d
 rot f c a b = f a b c
