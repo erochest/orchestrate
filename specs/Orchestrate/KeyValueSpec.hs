@@ -14,16 +14,12 @@ import           Test.Hspec
 
 import           Database.Orchestrate.KeyValue
 import           Database.Orchestrate.Types
-import           Database.Orchestrate.Utils
 
 import           Orchestrate.Spec.Types
+import           Orchestrate.Spec.Utils
 
 
 -- TODO: Use a proxy to cache results for testing
-
-
-run :: OrchestrateIO m -> IO (Either T.Text m)
-run m = envSession >>= runO' m
 
 getPerson :: Key -> IO (Either T.Text (Maybe Person))
 getPerson = run . getKV "test-coll"
