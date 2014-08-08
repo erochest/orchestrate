@@ -6,6 +6,8 @@
 {-# OPTIONS_GHC -Wall #-}
 
 
+-- TODO: Make the error type in OrchestrateT SomeException.
+
 module Database.Orchestrate.Types
     ( APIKey
     , Collection
