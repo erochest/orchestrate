@@ -22,7 +22,9 @@ module Database.Orchestrate.Types
     , Limit
     , Offset
 
-    , Session(..)
+    , RestClient(..)
+
+    , RestSession(..)
     , sessionURL
     , sessionKey
     , sessionVersion
@@ -59,6 +61,7 @@ module Database.Orchestrate.Types
     ) where
 
 
+import qualified Data.ByteString as BS
 import           Control.Applicative
 import           Control.Error
 import           Control.Lens
@@ -92,16 +95,27 @@ data RangeEnd a = Inclusive a
                 | Open
                 deriving (Show, Functor)
 
-data Session = Session
-             { _sessionURL     :: !T.Text
-             , _sessionKey     :: !APIKey
-             , _sessionVersion :: !Int
-             , _sessionOptions :: !Options
-             } deriving (Show)
-$(makeLenses ''Session)
+type URLPath = [T.Text]
+type ParamList a = [(a, a)]
 
-instance Default Session where
-    def = Session "https://api.orchestrate.io" "" 0
+class RestClient s r where
+    get     :: s -> URLPath -> ParamList BS.ByteString -> IO r
+    delete  :: s -> URLPath -> ParamList BS.ByteString -> IO r
+    put     :: s -> URLPath -> ParamList BS.ByteString -> IO r
+    putRaw  :: s -> URLPath -> BS.ByteString -> IO r
+    post    :: s -> URLPath -> ParamList BS.ByteString -> IO r
+    postRaw :: s -> URLPath -> ParamList BS.ByteString -> IO r
+
+data RestSession = RestSession
+                 { _sessionURL     :: !T.Text
+                 , _sessionKey     :: !APIKey
+                 , _sessionVersion :: !Int
+                 , _sessionOptions :: !Options
+                 } deriving (Show)
+$(makeLenses ''RestSession)
+
+instance Default RestSession where
+    def = RestSession "https://api.orchestrate.io" "" 0
         $ defaults & header "Content-Type" .~ ["application/json"]
                    & header "Accept"       .~ ["application/json"]
 
@@ -110,7 +124,7 @@ class (ToJSON a, FromJSON a) => OrchestrateData a where
     dataKey   :: a -> T.Text
 
 newtype OrchestrateT m a
-    = OrchestrateT { runOrchestrate :: EitherT T.Text (ReaderT Session m) a }
+    = OrchestrateT { runOrchestrate :: EitherT T.Text (ReaderT RestSession m) a }
     deriving (Functor, Applicative, Monad)
 
 instance MonadTrans OrchestrateT where
@@ -119,7 +133,7 @@ instance MonadTrans OrchestrateT where
 instance MonadIO m => MonadIO (OrchestrateT m) where
     liftIO = OrchestrateT . liftIO . liftIO
 
-instance Monad m => MonadReader Session (OrchestrateT m) where
+instance Monad m => MonadReader RestSession (OrchestrateT m) where
     ask     = OrchestrateT . lift $ ask
     local f = OrchestrateT . local f . runOrchestrate
 

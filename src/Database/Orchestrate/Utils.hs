@@ -47,15 +47,15 @@ import           Database.Orchestrate.Types
 ping :: OrchestrateIO ()
 ping = checkResponse =<< api [] [] Nothing headWith
 
-runO :: Monad m => OrchestrateT m a -> Session -> m (Either T.Text a)
+runO :: Monad m => OrchestrateT m a -> RestSession -> m (Either T.Text a)
 runO m s = runO' m $ over sessionOptions (withAuth $ s ^. sessionKey) s
 
-runO' :: Monad m => OrchestrateT m a -> Session -> m (Either T.Text a)
+runO' :: Monad m => OrchestrateT m a -> RestSession -> m (Either T.Text a)
 runO' m = runReaderT (runEitherT $ runOrchestrate m)
 
 baseUrl :: Monad m => OrchestrateT m T.Text
 baseUrl = do
-    Session{..} <- ask
+    RestSession{..} <- ask
     return $ mconcat [_sessionURL, "/v", tshow _sessionVersion]
 
 withAuth' :: APIKey -> Options
@@ -88,7 +88,7 @@ api' paths pairs o f = do
     where handler (StatusCodeException s _ _) = return $ Left s
           handler e                           = throwIO e
 
-envSession :: IO Session
+envSession :: IO RestSession
 envSession = do
     key <- T.pack <$> getEnv "ORCHESTRATE_API"
     return $ def & sessionKey .~ key
