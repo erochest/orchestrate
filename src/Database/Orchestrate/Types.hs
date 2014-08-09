@@ -142,11 +142,15 @@ buildUrl paths parms = do
                             . map (uncurry $ jn "=")
                             . over (traverse . both) B.byteString
                            $ map toPair parms
-    let paths' = L.foldr (jn "/") parms' $ map (B.byteString . E.encodeUtf8) paths
-    return . T.unpack . E.decodeUtf8 . BSL.toStrict . B.toLazyByteString $ mconcat [ B.byteString $ E.encodeUtf8 url
-                                                , "/v", B.intDec v
-                                                , "/", paths'
-                                                ]
+    let paths' = foldr (jn "/" . B.byteString . E.encodeUtf8) parms' paths
+    return . T.unpack
+           . E.decodeUtf8
+           . BSL.toStrict
+           . B.toLazyByteString
+           $ mconcat [ B.byteString $ E.encodeUtf8 url
+                     , "/v", B.intDec v
+                     , "/", paths'
+                     ]
     where jn j x y = x <> j <> y
           toPair (k := v) = (k, renderFormValue v)
 

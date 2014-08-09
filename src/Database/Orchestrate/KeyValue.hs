@@ -52,11 +52,11 @@ getKV c k = do
         Left (Just e) -> throwSome e
         Left Nothing  -> throwSome $ StatusCodeException status418 [] mempty
     where handler :: HttpException -> IO (Either (Maybe HttpException) a)
-          handler e@(StatusCodeException _ _ _) = return . Left $ Just e
+          handler e@(StatusCodeException{}) = return . Left $ Just e
           handler e = Ex.throw e
 
           onlyStatusCode :: HttpException -> Maybe HttpException
-          onlyStatusCode e@(StatusCodeException _ _ _) = Just e
+          onlyStatusCode e@(StatusCodeException{}) = Just e
           onlyStatusCode _ = Nothing
 
           filterStatusCode :: Ex.SomeException -> Maybe HttpException
