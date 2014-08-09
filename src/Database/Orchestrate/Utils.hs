@@ -10,15 +10,13 @@ module Database.Orchestrate.Utils
     , baseUrl
     , withAuth'
     , withAuth
-    , api
-    , api'
     , envSession
     , rot
     , ifMatch
     , ifMatch'
     , locationKey
     , locationRef
-    , rangeParams
+    , getLocation
     , rangeStart
     , rangeEnd
     , tshow
@@ -27,16 +25,15 @@ module Database.Orchestrate.Utils
 
 import           Control.Applicative
 import           Control.Error
-import           Control.Exception            as Ex
+import qualified Control.Exception            as Ex
 import           Control.Lens
 import           Control.Monad.Reader
-import qualified Data.ByteString              as BS
-import           Data.CaseInsensitive
+import qualified Data.ByteString              as B
 import           Data.Default
 import           Data.Monoid
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as E
-import           Network.HTTP.Client
+import           Network.HTTP.Types.Header
 import           Network.Wreq
 import           System.Environment
 
@@ -45,12 +42,12 @@ import           Database.Orchestrate.Types
 
 
 ping :: OrchestrateIO ()
-ping = checkResponse =<< api [] [] Nothing headWith
+ping = ask >>= restGet [] [] [] >>= checkResponse
 
-runO :: Monad m => OrchestrateT m a -> RestSession -> m (Either T.Text a)
+runO :: Monad m => OrchestrateT m a -> RestSession -> m (Either Ex.SomeException a)
 runO m s = runO' m $ over sessionOptions (withAuth $ s ^. sessionKey) s
 
-runO' :: Monad m => OrchestrateT m a -> RestSession -> m (Either T.Text a)
+runO' :: Monad m => OrchestrateT m a -> RestSession -> m (Either Ex.SomeException a)
 runO' m = runReaderT (runEitherT $ runOrchestrate m)
 
 baseUrl :: Monad m => OrchestrateT m T.Text
@@ -64,30 +61,6 @@ withAuth' key = withAuth key defaults
 withAuth :: APIKey -> Options -> Options
 withAuth key o = o & auth .~ basicAuth (E.encodeUtf8 key) ""
 
-addp :: [T.Text] -> T.Text -> T.Text
-addp [] url = url
-addp p  url = mconcat [url, "?", T.intercalate "&" p]
-
-buildUrl :: [T.Text] -> [T.Text] -> T.Text -> String
-buildUrl pr pt = T.unpack . addp pr . T.intercalate "/" . (:pt)
-
-api :: [T.Text] -> [T.Text] -> Maybe (Options -> Options)
-    -> (Options -> String -> IO (Response a))
-    -> OrchestrateIO (Response a)
-api paths pairs o f = do
-    opts <- views sessionOptions $ fromMaybe id o
-    io . f opts =<< fmap (buildUrl pairs paths) baseUrl
-
-api' :: [T.Text] -> [T.Text] -> Maybe (Options -> Options)
-     -> (Options -> String -> IO (Response a))
-     -> OrchestrateIO (Either Status (Response a))
-api' paths pairs o f = do
-    opts <- views sessionOptions $ fromMaybe id o
-    url  <- buildUrl pairs paths <$> baseUrl
-    io $ fmap Right (f opts url) `Ex.catch` handler
-    where handler (StatusCodeException s _ _) = return $ Left s
-          handler e                           = throwIO e
-
 envSession :: IO RestSession
 envSession = do
     key <- T.pack <$> getEnv "ORCHESTRATE_API"
@@ -97,17 +70,13 @@ envSession = do
 rot :: (a -> b -> c -> d) -> c -> a -> b -> d
 rot f c a b = f a b c
 
-ifMatch :: IfMatch -> Options -> Options
-ifMatch (Just r) = set (header "If-Match") [E.encodeUtf8 r]
-ifMatch Nothing  = id
+ifMatch :: IfMatch -> [Header]
+ifMatch = maybeToList . fmap ((,) "If-Match" . E.encodeUtf8)
 
-ifMatch' :: IfMatch' -> Options -> Options
-ifMatch' (IfMatch r)     = withHeader "If-Match"      r
-ifMatch' (IfNoneMatch r) = withHeader "If-None-Match" r
-ifMatch' NoMatch         = id
-
-withHeader :: CI BS.ByteString -> T.Text -> Options -> Options
-withHeader h r = set (header h) [E.encodeUtf8 r]
+ifMatch' :: IfMatch' -> [Header]
+ifMatch' (IfMatch r)     = [("If-Match", E.encodeUtf8 r)]
+ifMatch' (IfNoneMatch r) = [("If-None-Match", E.encodeUtf8 r)]
+ifMatch' NoMatch         = []
 
 -- locationKey :: (T.Text -> T.Text) -> T.Text -> T.Text -> T.Text
 locationKey :: Prism' T.Text T.Text
@@ -116,19 +85,17 @@ locationKey = prism' (mappend "//") ((`atMay` 3) . T.split (=='/'))
 locationRef :: Prism' T.Text T.Text
 locationRef = prism' (mappend "////") ((`atMay` 5) . T.split (=='/'))
 
-rangeParams :: Show a => T.Text -> Range a -> [T.Text]
-rangeParams k (start, end) = catMaybes [ rangeStart k start
-                                       , rangeEnd   k end
-                                       ]
+getLocation :: Response a -> T.Text
+getLocation = E.decodeUtf8 . view (responseHeader "Location")
 
-rangeStart :: Show a => T.Text -> RangeEnd a -> Maybe T.Text
-rangeStart k (Inclusive r) = Just $ mconcat ["start", k, "=", tshow r]
-rangeStart k (Exclusive r) = Just $ mconcat ["after", k, "=", tshow r]
+rangeStart :: FormValue a => B.ByteString -> RangeEnd a -> Maybe FormParam
+rangeStart k (Inclusive r) = Just $ ("start" <> k) := r
+rangeStart k (Exclusive r) = Just $ ("after" <> k) := r
 rangeStart _ Open          = Nothing
 
-rangeEnd :: Show a => T.Text -> RangeEnd a -> Maybe T.Text
-rangeEnd k (Inclusive r) = Just $ mconcat ["end",    k, "=", tshow r]
-rangeEnd k (Exclusive r) = Just $ mconcat ["before", k, "=", tshow r]
+rangeEnd :: FormValue a => B.ByteString -> RangeEnd a -> Maybe FormParam
+rangeEnd k (Inclusive r) = Just $ ("end"    <> k) := r
+rangeEnd k (Exclusive r) = Just $ ("before" <> k) := r
 rangeEnd _ Open          = Nothing
 
 tshow :: Show a => a -> T.Text

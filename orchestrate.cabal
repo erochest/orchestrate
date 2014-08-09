@@ -33,6 +33,7 @@ library
                      , text
                      , wreq
                      , http-client
+                     , http-types
                      , aeson
                      , unordered-containers
                      , errors
