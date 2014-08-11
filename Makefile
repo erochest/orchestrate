@@ -14,6 +14,9 @@ spec: build
 run:
 	cabal run
 
+lint:
+	find src -name \*.hs -exec hlint -v \{\} \;
+
 # docs:
 # generate api documentation
 #
