@@ -39,10 +39,14 @@ import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
 
+-- TODO: Use more-standard names.
+
+
 getKV :: FromJSON v => Collection -> Key -> OrchestrateIO (Maybe v)
 getKV c k = do
     s <- ask
-    -- I'm not convinced this does what I think it does.
+    -- I'm not convinced this does what I think it does. But the tests
+    -- pass.
     er <- liftIO $ Ex.catchJust
         Ex.fromException
         (fmapL filterStatusCode <$> runO' (api [] [c, k] [] getWith) s)
