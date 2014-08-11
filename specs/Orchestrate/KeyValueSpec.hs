@@ -4,7 +4,7 @@
 module Orchestrate.KeyValueSpec where
 
 
-import qualified Control.Exception as Ex
+import qualified Control.Exception             as Ex
 import           Control.Lens                  hiding ((.=))
 import           Control.Monad
 import           Data.Either
@@ -24,6 +24,11 @@ getPerson = run . getKV "test-coll"
 
 spec :: Spec
 spec = describe "Database.Orchestrate.KeyValue" $ do
+    it "should contain tests." $
+        pendingWith "commented out."
+
+spec' :: Spec
+spec' = do
     describe "getKV" $ do
         it "should return Nothing if the key isn't there." $ do
             r <- getPerson "name"
