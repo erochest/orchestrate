@@ -45,7 +45,7 @@ getKV c k = do
     -- I'm not convinced this does what I think it does.
     er <- liftIO $ Ex.catchJust
         Ex.fromException
-        (fmapL filterStatusCode <$> runO' (api [c, k] [] Nothing getWith) s)
+        (fmapL filterStatusCode <$> runO' (api [] [c, k] [] getWith) s)
         handler
     case er of
         Right r -> checkResponse r >> return (decode $ r ^. responseBody)
@@ -74,19 +74,18 @@ putKV v = putV (dataKey v) v
 
 putV :: OrchestrateData v => Key -> v -> IfMatch' -> OrchestrateIO Location
 putV k v m =   E.decodeUtf8 . view (responseHeader "Location")
-           <$> api [tableName v, k] [] m' (rot putWith v')
-    where m' = Just $ ifMatch' m
-          v' = toJSON v
+           <$> api (ifMatch' m) [tableName v, k] [] (rot putWith v')
+    where v' = toJSON v
 
 postV :: OrchestrateData v => v -> OrchestrateIO (Location, Maybe Key)
 postV v =   (id &&& firstOf locationKey) . E.decodeUtf8 . view (responseHeader "Location")
-        <$> api [tableName v] [] Nothing (rot postWith (toJSON v))
+        <$> api [] [tableName v] [] (rot postWith (toJSON v))
 
 deleteKV :: OrchestrateData v => v -> IfMatch -> OrchestrateIO ()
 deleteKV v = deleteV (dataKey v) v
 
 deleteV :: OrchestrateData v => Key -> v -> IfMatch -> OrchestrateIO ()
-deleteV k v m =   api [tableName v, k] [] (Just $ ifMatch m) deleteWith
+deleteV k v m =   api (ifMatch m) [tableName v, k] [] deleteWith
               >>= checkResponse
 
 purgeKV :: OrchestrateData v => v -> IfMatch -> OrchestrateIO ()
@@ -94,14 +93,13 @@ purgeKV v = purgeV (dataKey v) v
 
 purgeV :: OrchestrateData v => Key -> v -> IfMatch -> OrchestrateIO ()
 purgeV k v m =
-        api [tableName v, k] ["purge" := ("true" :: T.Text)]
-            (Just $ ifMatch m) deleteWith
+        api (ifMatch m) [tableName v, k] ["purge" := ("true" :: T.Text)] deleteWith
     >>= checkResponse
 
 listKV :: FromJSON v
        => Collection -> Maybe Int -> Range Key -> OrchestrateIO (KVList v)
 listKV c limit (start, end) = do
-    r <- api [c] ps Nothing getWith
+    r <- api [] [c] ps getWith
     checkResponse r
     orchestrateEither . note err . decode $ r ^. responseBody
     where ps = catMaybes [ Just $ "limit" := limit

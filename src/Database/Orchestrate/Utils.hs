@@ -41,6 +41,7 @@ import           Data.Monoid
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as E
 import           Network.HTTP.Client
+import           Network.HTTP.Types
 import           Network.Wreq
 import           Network.Wreq.Types           hiding (auth)
 import           System.Environment
@@ -50,7 +51,7 @@ import           Database.Orchestrate.Types
 
 
 ping :: OrchestrateIO ()
-ping = checkResponse =<< api [] [] Nothing headWith
+ping = checkResponse =<< api [] [] [] headWith
 
 runO :: Monad m => OrchestrateT m a -> Session -> m (Either Ex.SomeException a)
 runO m s = runO' m $ over sessionOptions (withAuth $ s ^. sessionKey) s
@@ -93,18 +94,21 @@ buildUrl paths parms = do
     where jn j x y = x <> j <> y
           toPair (k := v) = (k, renderFormValue v)
 
-api :: [T.Text] -> [FormParam] -> Maybe (Options -> Options)
+hPair :: Options -> Header -> Options
+hPair o (k, v) = o & header k .~ [v]
+
+api :: RequestHeaders -> [T.Text] -> [FormParam]
     -> (Options -> String -> IO (Response a))
     -> OrchestrateIO (Response a)
-api paths pairs o f = do
-    opts <- views sessionOptions $ fromMaybe id o
+api hdrs paths pairs f = do
+    opts <- views sessionOptions $ flip (L.foldl' hPair) hdrs
     io . f opts =<< buildUrl paths pairs
 
-api' :: [T.Text] -> [FormParam] -> Maybe (Options -> Options)
+api' :: RequestHeaders -> [T.Text] -> [FormParam]
      -> (Options -> String -> IO (Response a))
      -> OrchestrateIO (Either Status (Response a))
-api' paths pairs o f = do
-    opts <- views sessionOptions $ fromMaybe id o
+api' hdrs paths pairs f = do
+    opts <- views sessionOptions $ flip (L.foldl' hPair) hdrs
     url  <- buildUrl paths pairs
     io $ fmap Right (f opts url) `Ex.catch` handler
     where handler (StatusCodeException s _ _) = return $ Left s
@@ -119,14 +123,14 @@ envSession = do
 rot :: (a -> b -> c -> d) -> c -> a -> b -> d
 rot f c a b = f a b c
 
-ifMatch :: IfMatch -> Options -> Options
-ifMatch (Just r) = set (header "If-Match") [E.encodeUtf8 r]
-ifMatch Nothing  = id
+ifMatch :: IfMatch -> [Header]
+ifMatch (Just r) = [("If-Match", E.encodeUtf8 r)]
+ifMatch Nothing  = []
 
-ifMatch' :: IfMatch' -> Options -> Options
-ifMatch' (IfMatch r)     = withHeader "If-Match"      r
-ifMatch' (IfNoneMatch r) = withHeader "If-None-Match" r
-ifMatch' NoMatch         = id
+ifMatch' :: IfMatch' -> [Header]
+ifMatch' (IfMatch r)     = [("If-Match",      E.encodeUtf8 r)]
+ifMatch' (IfNoneMatch r) = [("If-None-Match", E.encodeUtf8 r)]
+ifMatch' NoMatch         = []
 
 withHeader :: CI BS.ByteString -> T.Text -> Options -> Options
 withHeader h r = set (header h) [E.encodeUtf8 r]

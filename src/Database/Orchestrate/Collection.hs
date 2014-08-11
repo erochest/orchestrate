@@ -17,5 +17,5 @@ import           Database.Orchestrate.Utils
 
 deleteCollection :: Collection -> OrchestrateIO ()
 deleteCollection c =
-        api [c] ["force" := ("true" :: T.Text)] Nothing deleteWith
+        api [] [c] ["force" := ("true" :: T.Text)] deleteWith
     >>= checkResponse
