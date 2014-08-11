@@ -4,11 +4,11 @@
 module Orchestrate.KeyValueSpec where
 
 
+import qualified Control.Exception as Ex
 import           Control.Lens                  hiding ((.=))
 import           Control.Monad
 import           Data.Either
 import qualified Data.List                     as L
-import qualified Data.Text                     as T
 
 import           Test.Hspec
 
@@ -21,7 +21,7 @@ import           Orchestrate.Spec.Utils
 
 -- TODO: Use a proxy to cache results for testing
 
-getPerson :: Key -> IO (Either T.Text (Maybe Person))
+getPerson :: Key -> IO (Either Ex.SomeException (Maybe Person))
 getPerson = run . getKV "test-coll"
 
 spec :: Spec
@@ -29,7 +29,7 @@ spec = describe "Database.Orchestrate.KeyValue" $ do
     describe "getKV" $ do
         it "should return Nothing if the key isn't there." $ do
             r <- getPerson "name"
-            r `shouldBe` Right Nothing
+            r `shouldSatisfy` isn't (_Right . _Just)
     describe "putKV" $ do
         it "should insert a value into the database." $ do
             r <- run $ putKV (Person "eric" 44) NoMatch
@@ -48,7 +48,7 @@ spec = describe "Database.Orchestrate.KeyValue" $ do
             r <- run $ deleteKV (Person "eric" undefined) Nothing
             r `shouldSatisfy` isRight
             r' <- getPerson "eric"
-            r' `shouldBe` Right Nothing
+            r' `shouldSatisfy` isn't (_Right . _Just)
     describe "listKV" $ do
         it "should retrieve values from the database." $ do
             let names = ["abbie", "bob", "carol"]

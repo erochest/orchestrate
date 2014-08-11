@@ -6,7 +6,8 @@
 {-# OPTIONS_GHC -Wall #-}
 
 
--- TODO: Make the error type in OrchestrateT SomeException.
+-- TODO: Use types from wreq for params, headers, etc.
+-- TODO: Clean this up some. Eeek.
 
 module Database.Orchestrate.Types
     ( APIKey
@@ -61,6 +62,7 @@ module Database.Orchestrate.Types
 
 import           Control.Applicative
 import           Control.Error
+import qualified Control.Exception         as Ex
 import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Error.Class
@@ -68,7 +70,9 @@ import           Control.Monad.Reader
 import           Data.Aeson
 import           Data.Default
 import qualified Data.Text                 as T
+import           Network.HTTP.Types.Header
 import           Network.Wreq
+import           Network.Wreq.Types
 
 
 type APIKey     = T.Text
@@ -110,7 +114,8 @@ class (ToJSON a, FromJSON a) => OrchestrateData a where
     dataKey   :: a -> T.Text
 
 newtype OrchestrateT m a
-    = OrchestrateT { runOrchestrate :: EitherT T.Text (ReaderT Session m) a }
+    = OrchestrateT
+    { runOrchestrate :: EitherT Ex.SomeException (ReaderT Session m) a }
     deriving (Functor, Applicative, Monad)
 
 instance MonadTrans OrchestrateT where
@@ -124,11 +129,11 @@ instance Monad m => MonadReader Session (OrchestrateT m) where
     local f = OrchestrateT . local f . runOrchestrate
 
 io :: MonadIO m => IO a -> OrchestrateT m a
-io = OrchestrateT . fmapLT (T.pack . show) . syncIO
+io = OrchestrateT . syncIO
 
 -- TODO: Need to define this for other monad classes.
 
-instance Monad m => MonadError T.Text (OrchestrateT m) where
+instance Monad m => MonadError Ex.SomeException (OrchestrateT m) where
     throwError = OrchestrateT . EitherT . return . Left
     catchError a handler =   join
                          .   fmap (handler' handler)
@@ -137,11 +142,14 @@ instance Monad m => MonadError T.Text (OrchestrateT m) where
                          =<< ask
 
 handler' :: Monad m
-         => (T.Text -> OrchestrateT m a) -> Either T.Text a -> OrchestrateT m a
+         => (Ex.SomeException -> OrchestrateT m a)
+         -> Either Ex.SomeException a
+         -> OrchestrateT m a
 handler' _ (Right v) = return v
 handler' f (Left e)  = f e
 
-orchestrateEither :: Monad m => Either T.Text a -> OrchestrateT m a
+orchestrateEither :: Monad m
+                  => Either Ex.SomeException a -> OrchestrateT m a
 orchestrateEither = OrchestrateT . hoistEither
 
 type Orchestrate   = OrchestrateT Identity

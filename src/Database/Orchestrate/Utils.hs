@@ -8,6 +8,8 @@ module Database.Orchestrate.Utils
     , runO
     , runO'
     , baseUrl
+    , buildUrl
+    , buildUrl'
     , withAuth'
     , withAuth
     , api
@@ -18,6 +20,7 @@ module Database.Orchestrate.Utils
     , ifMatch'
     , locationKey
     , locationRef
+    , getLocation
     , rangeParams
     , rangeStart
     , rangeEnd
@@ -31,8 +34,11 @@ import           Control.Exception            as Ex
 import           Control.Lens
 import           Control.Monad.Reader
 import qualified Data.ByteString              as BS
-import           Data.CaseInsensitive
+import qualified Data.ByteString.Builder      as B
+import qualified Data.ByteString.Lazy         as BSL
+import           Data.CaseInsensitive         hiding (map)
 import           Data.Default
+import qualified Data.List                    as L
 import           Data.Monoid
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as E
@@ -47,10 +53,10 @@ import           Database.Orchestrate.Types
 ping :: OrchestrateIO ()
 ping = checkResponse =<< api [] [] Nothing headWith
 
-runO :: Monad m => OrchestrateT m a -> Session -> m (Either T.Text a)
+runO :: Monad m => OrchestrateT m a -> Session -> m (Either Ex.SomeException a)
 runO m s = runO' m $ over sessionOptions (withAuth $ s ^. sessionKey) s
 
-runO' :: Monad m => OrchestrateT m a -> Session -> m (Either T.Text a)
+runO' :: Monad m => OrchestrateT m a -> Session -> m (Either Ex.SomeException a)
 runO' m = runReaderT (runEitherT $ runOrchestrate m)
 
 baseUrl :: Monad m => OrchestrateT m T.Text
@@ -68,22 +74,43 @@ addp :: [T.Text] -> T.Text -> T.Text
 addp [] url = url
 addp p  url = mconcat [url, "?", T.intercalate "&" p]
 
-buildUrl :: [T.Text] -> [T.Text] -> T.Text -> String
-buildUrl pr pt = T.unpack . addp pr . T.intercalate "/" . (:pt)
+buildUrl' :: [T.Text] -> [T.Text] -> T.Text -> String
+buildUrl' pr pt = T.unpack . addp pr . T.intercalate "/" . (:pt)
+
+buildUrl :: Monad m => [T.Text] -> [T.Text] -> OrchestrateT m String
+buildUrl paths parms = do
+    url <- view sessionURL
+    v   <- view sessionVersion
+    let parms' = if L.null parms
+                     then mempty
+                     else mappend "?"
+                            . mconcat
+                            . L.intersperse "&"
+                            $ map (B.byteString . E.encodeUtf8) parms
+        paths' = foldr (jn "/" . B.byteString . E.encodeUtf8) parms' paths
+    return . T.unpack
+           . E.decodeUtf8
+           . BSL.toStrict
+           . B.toLazyByteString
+           $ mconcat [ B.byteString $ E.encodeUtf8 url
+                     , "/v", B.intDec v
+                     , "/", paths'
+                     ]
+    where jn j x y = x <> j <> y
 
 api :: [T.Text] -> [T.Text] -> Maybe (Options -> Options)
     -> (Options -> String -> IO (Response a))
     -> OrchestrateIO (Response a)
 api paths pairs o f = do
     opts <- views sessionOptions $ fromMaybe id o
-    io . f opts =<< fmap (buildUrl pairs paths) baseUrl
+    io . f opts =<< buildUrl paths pairs
 
 api' :: [T.Text] -> [T.Text] -> Maybe (Options -> Options)
      -> (Options -> String -> IO (Response a))
      -> OrchestrateIO (Either Status (Response a))
 api' paths pairs o f = do
     opts <- views sessionOptions $ fromMaybe id o
-    url  <- buildUrl pairs paths <$> baseUrl
+    url  <- buildUrl paths pairs
     io $ fmap Right (f opts url) `Ex.catch` handler
     where handler (StatusCodeException s _ _) = return $ Left s
           handler e                           = throwIO e
@@ -115,6 +142,9 @@ locationKey = prism' (mappend "//") ((`atMay` 3) . T.split (=='/'))
 
 locationRef :: Prism' T.Text T.Text
 locationRef = prism' (mappend "////") ((`atMay` 5) . T.split (=='/'))
+
+getLocation :: Response a -> T.Text
+getLocation = E.decodeUtf8 . view (responseHeader "Location")
 
 rangeParams :: Show a => T.Text -> Range a -> [T.Text]
 rangeParams k (start, end) = catMaybes [ rangeStart k start
