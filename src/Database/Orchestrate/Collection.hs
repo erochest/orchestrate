@@ -8,6 +8,7 @@ module Database.Orchestrate.Collection
 
 
 import           Network.Wreq
+import qualified Data.Text as T
 
 import           Database.Orchestrate.Network
 import           Database.Orchestrate.Types
@@ -15,4 +16,6 @@ import           Database.Orchestrate.Utils
 
 
 deleteCollection :: Collection -> OrchestrateIO ()
-deleteCollection c = checkResponse =<< api [c] ["force=true"] Nothing deleteWith
+deleteCollection c =
+        api [c] ["force" := ("true" :: T.Text)] Nothing deleteWith
+    >>= checkResponse

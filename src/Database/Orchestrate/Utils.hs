@@ -9,7 +9,6 @@ module Database.Orchestrate.Utils
     , runO'
     , baseUrl
     , buildUrl
-    , buildUrl'
     , withAuth'
     , withAuth
     , api
@@ -21,7 +20,6 @@ module Database.Orchestrate.Utils
     , locationKey
     , locationRef
     , getLocation
-    , rangeParams
     , rangeStart
     , rangeEnd
     , tshow
@@ -44,6 +42,7 @@ import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as E
 import           Network.HTTP.Client
 import           Network.Wreq
+import           Network.Wreq.Types           hiding (auth)
 import           System.Environment
 
 import           Database.Orchestrate.Network
@@ -70,14 +69,7 @@ withAuth' key = withAuth key defaults
 withAuth :: APIKey -> Options -> Options
 withAuth key o = o & auth .~ basicAuth (E.encodeUtf8 key) ""
 
-addp :: [T.Text] -> T.Text -> T.Text
-addp [] url = url
-addp p  url = mconcat [url, "?", T.intercalate "&" p]
-
-buildUrl' :: [T.Text] -> [T.Text] -> T.Text -> String
-buildUrl' pr pt = T.unpack . addp pr . T.intercalate "/" . (:pt)
-
-buildUrl :: Monad m => [T.Text] -> [T.Text] -> OrchestrateT m String
+buildUrl :: Monad m => [T.Text] -> [FormParam] -> OrchestrateT m String
 buildUrl paths parms = do
     url <- view sessionURL
     v   <- view sessionVersion
@@ -86,7 +78,9 @@ buildUrl paths parms = do
                      else mappend "?"
                             . mconcat
                             . L.intersperse "&"
-                            $ map (B.byteString . E.encodeUtf8) parms
+                            . map (uncurry $ jn "=")
+                            . over (traverse . both) B.byteString
+                            $ map toPair parms
         paths' = foldr (jn "/" . B.byteString . E.encodeUtf8) parms' paths
     return . T.unpack
            . E.decodeUtf8
@@ -97,15 +91,16 @@ buildUrl paths parms = do
                      , "/", paths'
                      ]
     where jn j x y = x <> j <> y
+          toPair (k := v) = (k, renderFormValue v)
 
-api :: [T.Text] -> [T.Text] -> Maybe (Options -> Options)
+api :: [T.Text] -> [FormParam] -> Maybe (Options -> Options)
     -> (Options -> String -> IO (Response a))
     -> OrchestrateIO (Response a)
 api paths pairs o f = do
     opts <- views sessionOptions $ fromMaybe id o
     io . f opts =<< buildUrl paths pairs
 
-api' :: [T.Text] -> [T.Text] -> Maybe (Options -> Options)
+api' :: [T.Text] -> [FormParam] -> Maybe (Options -> Options)
      -> (Options -> String -> IO (Response a))
      -> OrchestrateIO (Either Status (Response a))
 api' paths pairs o f = do
@@ -146,19 +141,14 @@ locationRef = prism' (mappend "////") ((`atMay` 5) . T.split (=='/'))
 getLocation :: Response a -> T.Text
 getLocation = E.decodeUtf8 . view (responseHeader "Location")
 
-rangeParams :: Show a => T.Text -> Range a -> [T.Text]
-rangeParams k (start, end) = catMaybes [ rangeStart k start
-                                       , rangeEnd   k end
-                                       ]
-
-rangeStart :: Show a => T.Text -> RangeEnd a -> Maybe T.Text
-rangeStart k (Inclusive r) = Just $ mconcat ["start", k, "=", tshow r]
-rangeStart k (Exclusive r) = Just $ mconcat ["after", k, "=", tshow r]
+rangeStart :: FormValue a => BS.ByteString -> RangeEnd a -> Maybe FormParam
+rangeStart k (Inclusive r) = Just $ ("start" <> k) := r
+rangeStart k (Exclusive r) = Just $ ("after" <> k) := r
 rangeStart _ Open          = Nothing
 
-rangeEnd :: Show a => T.Text -> RangeEnd a -> Maybe T.Text
-rangeEnd k (Inclusive r) = Just $ mconcat ["end",    k, "=", tshow r]
-rangeEnd k (Exclusive r) = Just $ mconcat ["before", k, "=", tshow r]
+rangeEnd :: FormValue a => BS.ByteString -> RangeEnd a -> Maybe FormParam
+rangeEnd k (Inclusive r) = Just $ ("end"    <> k) := r
+rangeEnd k (Exclusive r) = Just $ ("before" <> k) := r
 rangeEnd _ Open          = Nothing
 
 tshow :: Show a => a -> T.Text

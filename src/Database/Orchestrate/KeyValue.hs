@@ -93,8 +93,10 @@ purgeKV :: OrchestrateData v => v -> IfMatch -> OrchestrateIO ()
 purgeKV v = purgeV (dataKey v) v
 
 purgeV :: OrchestrateData v => Key -> v -> IfMatch -> OrchestrateIO ()
-purgeV k v m =   api [tableName v, k] ["purge=true"] (Just $ ifMatch m) deleteWith
-             >>= checkResponse
+purgeV k v m =
+        api [tableName v, k] ["purge" := ("true" :: T.Text)]
+            (Just $ ifMatch m) deleteWith
+    >>= checkResponse
 
 listKV :: FromJSON v
        => Collection -> Maybe Int -> Range Key -> OrchestrateIO (KVList v)
@@ -102,7 +104,7 @@ listKV c limit (start, end) = do
     r <- api [c] ps Nothing getWith
     checkResponse r
     orchestrateEither . note err . decode $ r ^. responseBody
-    where ps = catMaybes [ ("limit=" <>) . T.pack . show <$> limit
+    where ps = catMaybes [ Just $ "limit" := limit
                          , rangeStart "Key" start
                          , rangeEnd   "Key" end
                          ]

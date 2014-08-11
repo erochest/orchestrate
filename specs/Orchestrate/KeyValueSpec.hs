@@ -19,8 +19,6 @@ import           Orchestrate.Spec.Types
 import           Orchestrate.Spec.Utils
 
 
--- TODO: Use a proxy to cache results for testing
-
 getPerson :: Key -> IO (Either Ex.SomeException (Maybe Person))
 getPerson = run . getKV "test-coll"
 
