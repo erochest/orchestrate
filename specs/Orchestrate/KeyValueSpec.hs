@@ -4,9 +4,7 @@
 module Orchestrate.KeyValueSpec where
 
 
-import qualified Control.Exception             as Ex
 import           Control.Lens                  hiding ((.=))
-import           Control.Monad
 import           Data.Either
 import qualified Data.List                     as L
 
@@ -23,36 +21,36 @@ getPerson :: Key -> IO (Either Ex.SomeException (Maybe Person))
 getPerson = run . getKV "test-coll"
 
 spec :: Spec
-spec = describe "Database.Orchestrate.KeyValue" $ do
+spec = describe "Database.Orchestrate.KeyValue" $
     it "should contain tests." $
         pendingWith "commented out."
 
 spec' :: Spec
 spec' = do
-    describe "getKV" $ do
+    describe "getKV" $
         it "should return Nothing if the key isn't there." $ do
             r <- getPerson "name"
             r `shouldSatisfy` isn't (_Right . _Just)
-    describe "putKV" $ do
+    describe "putKV" $
         it "should insert a value into the database." $ do
             r <- run $ putKV (Person "eric" 44) NoMatch
             r `shouldSatisfy` isRight
             r' <- getPerson "eric"
             r' ^? _Right . _Just `shouldBe` Just (Person "eric" 44)
-    describe "postV" $ do
+    describe "postV" $
         it "should insert a value and get back a key." $ do
             let elsa = Person "elsa" 10
             Right (_, Just k) <- run (postV elsa)
             e <- getPerson k
             e ^? _Right . _Just `shouldBe` Just (Person "elsa" 10)
-            void . run $ purgeV k (Person "elsa" undefined) Nothing
-    describe "deleteKV" $ do
+            run' $ purgeV k (Person "elsa" undefined) Nothing
+    describe "deleteKV" $
         it "should remove a value from the database." $ do
             r <- run $ deleteKV (Person "eric" undefined) Nothing
             r `shouldSatisfy` isRight
             r' <- getPerson "eric"
             r' `shouldSatisfy` isn't (_Right . _Just)
-    describe "listKV" $ do
+    describe "listKV" $
         it "should retrieve values from the database." $ do
             let names = ["abbie", "bob", "carol"]
             r <- run . mapM_ ((`putKV` NoMatch) . uncurry Person) $ zip names [1..]
@@ -62,4 +60,4 @@ spec' = do
             let Right kvl = r'
             _resultCount kvl `shouldBe` 3
             L.sort (map (name . _itemValue) (_resultList kvl)) `shouldBe` names
-            void . run $ mapM_ ((`purgeKV` Nothing) . (`Person` undefined)) names
+            run' $ mapM_ ((`purgeKV` Nothing) . (`Person` undefined)) names
