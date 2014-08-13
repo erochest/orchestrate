@@ -22,6 +22,7 @@ module Database.Orchestrate.Types
     , RangeEnd(..)
     , Limit
     , Offset
+    , RestCall
 
     , Session(..)
     , sessionURL
@@ -82,6 +83,7 @@ type Location   = T.Text
 type IfMatch    = Maybe Ref
 type Limit      = Int
 type Offset     = Int
+type RestCall a = Options -> String -> IO (Response a)
 
 data IfMatch'   = IfMatch Ref
                 | IfNoneMatch Ref

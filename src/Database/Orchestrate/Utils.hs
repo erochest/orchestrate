@@ -102,15 +102,13 @@ buildUrl paths parms = do
 hPair :: Options -> Header -> Options
 hPair o (k, v) = o & header k .~ [v]
 
-api :: RequestHeaders -> [T.Text] -> [FormParam]
-    -> (Options -> String -> IO (Response a))
+api :: RequestHeaders -> [T.Text] -> [FormParam] -> RestCall a
     -> OrchestrateIO (Response a)
 api hdrs paths pairs f = do
     opts <- views sessionOptions $ flip (L.foldl' hPair) hdrs
     io . f opts =<< buildUrl paths pairs
 
-api' :: RequestHeaders -> [T.Text] -> [FormParam]
-     -> (Options -> String -> IO (Response a))
+api' :: RequestHeaders -> [T.Text] -> [FormParam] -> RestCall a
      -> OrchestrateIO (Either Status (Response a))
 api' hdrs paths pairs f = do
     opts <- views sessionOptions $ flip (L.foldl' hPair) hdrs
@@ -119,8 +117,7 @@ api' hdrs paths pairs f = do
     where handler (StatusCodeException s _ _) = return $ Left s
           handler e                           = throwIO e
 
-apiCheck :: RequestHeaders -> [T.Text] -> [FormParam]
-         -> (Options -> String -> IO (Response a))
+apiCheck :: RequestHeaders -> [T.Text] -> [FormParam] -> RestCall a
          -> OrchestrateIO (Response a)
 apiCheck rh rpath rparams handler = do
     r <- api rh rpath rparams handler
@@ -129,15 +126,14 @@ apiCheck rh rpath rparams handler = do
 
 apiCheckDecode :: FromJSON a
                => RequestHeaders -> [T.Text] -> [FormParam]
-               -> (Options -> String -> IO (Response BSL.ByteString))
+               -> RestCall BSL.ByteString
                -> OrchestrateIO a
 apiCheckDecode rh rpath rparams handler =
         apiCheck rh rpath rparams handler
     >>= orchestrateEither . fmapL errex . eitherDecode . (^. responseBody)
     where errex = Ex.SomeException . Ex.ErrorCall
 
-api404 :: RequestHeaders -> [T.Text] -> [FormParam]
-       -> (Options -> String -> IO (Response a))
+api404 :: RequestHeaders -> [T.Text] -> [FormParam] -> RestCall a
        -> OrchestrateIO (Maybe (Response a))
 api404 hdrs pths parms f = do
     s  <- ask
