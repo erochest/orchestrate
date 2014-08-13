@@ -18,7 +18,7 @@ import           Orchestrate.Spec.Utils
 
 
 spec :: Spec
-spec = describe "Database.Orchestrate.KeyValue" $
+spec = describe "Database.Orchestrate.KeyValue" $ do
     it "should contain tests." $
         pendingWith "commented out."
 

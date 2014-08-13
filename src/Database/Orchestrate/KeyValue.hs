@@ -20,15 +20,13 @@ module Database.Orchestrate.KeyValue
 import           Control.Applicative
 import           Control.Arrow
 import           Control.Error
-import qualified Control.Exception            as Ex
 import           Control.Lens
-import           Control.Monad                (join)
+import           Control.Monad                (join, void)
 import           Data.Aeson
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as E
 import           Network.Wreq
 
-import           Database.Orchestrate.Network
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
@@ -55,27 +53,22 @@ deleteKV :: OrchestrateData v => v -> IfMatch -> OrchestrateIO ()
 deleteKV v = deleteV (dataKey v) v
 
 deleteV :: OrchestrateData v => Key -> v -> IfMatch -> OrchestrateIO ()
-deleteV k v m =   api (ifMatch m) [tableName v, k] [] deleteWith
-              >>= checkResponse
+deleteV k v m = void $ apiCheck (ifMatch m) [tableName v, k] [] deleteWith
 
 purgeKV :: OrchestrateData v => v -> IfMatch -> OrchestrateIO ()
 purgeKV v = purgeV (dataKey v) v
 
 purgeV :: OrchestrateData v => Key -> v -> IfMatch -> OrchestrateIO ()
 purgeV k v m =
-        api (ifMatch m) [tableName v, k] ["purge" := ("true" :: T.Text)] deleteWith
-    >>= checkResponse
+    void $ apiCheck (ifMatch m) [tableName v, k]
+                    ["purge" := ("true" :: T.Text)] deleteWith
 
 listKV :: FromJSON v
        => Collection -> Maybe Int -> Range Key -> OrchestrateIO (KVList v)
-listKV c limit (start, end) = do
-    r <- api [] [c] ps getWith
-    checkResponse r
-    orchestrateEither . fmapL errex . eitherDecode $ r ^. responseBody
+listKV c limit (start, end) = apiCheckDecode [] [c] ps getWith
     where ps = catMaybes [ Just $ "limit" := limit
                          , rangeStart "Key" start
                          , rangeEnd   "Key" end
                          ]
-          errex = Ex.SomeException . Ex.ErrorCall
 
 type KVList v = ResultList (ResultItem Path v)

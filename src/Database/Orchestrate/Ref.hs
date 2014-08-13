@@ -19,7 +19,6 @@ module Database.Orchestrate.Ref
 
 import           Control.Applicative
 import           Control.Error
-import qualified Control.Exception as Ex
 import           Control.Lens
 import           Control.Monad
 import           Data.Aeson
@@ -28,7 +27,6 @@ import qualified Data.HashMap.Strict        as M
 import qualified Data.Text as T
 import           Network.Wreq
 
-import           Database.Orchestrate.Network
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
@@ -40,13 +38,9 @@ getRef c k r =
 listRefs :: FromJSON v
          => Collection -> Key -> Maybe Int -> Maybe Int -> Bool
          -> OrchestrateIO (ResultList (TombstoneItem v))
-listRefs c k limit offset values = do
-    r <- api [] [c, k, "refs"] parms getWith
-    checkResponse r
-    orchestrateEither . fmapL errex . eitherDecode $ r ^. responseBody
-    where errex = Ex.SomeException . Ex.ErrorCall
-          ifm :: Bool -> a -> Maybe a
-          ifm True  = Just
+listRefs c k limit offset values =
+    apiCheckDecode [] [c, k, "refs"] parms getWith
+    where ifm True  = Just
           ifm False = const Nothing
           parms = catMaybes [ ifm values $ "values" := ("true" :: T.Text)
                             , ("limit"  :=) . show <$> limit

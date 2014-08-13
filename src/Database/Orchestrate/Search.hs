@@ -22,14 +22,12 @@ module Database.Orchestrate.Search
 
 import           Control.Applicative
 import           Control.Error
-import qualified Control.Exception as Ex
 import           Control.Lens
 import           Control.Monad
 import           Data.Aeson
 import qualified Data.Text                  as T
 import           Network.Wreq
 
-import           Database.Orchestrate.Network
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
@@ -63,12 +61,8 @@ instance FromJSON v => FromJSON (SearchList v) where
 query :: FromJSON v
       => Collection -> QueryText -> Maybe Int -> Maybe Int
       -> OrchestrateIO (SearchList v)
-query c q limit offset = do
-    s <- api [] [c] parms getWith
-    checkResponse s
-    orchestrateEither . fmapL errex . eitherDecode $ s ^. responseBody
-    where errex = Ex.SomeException . Ex.ErrorCall
-          parms = catMaybes [Just $ "query" := q
+query c q limit offset = apiCheckDecode [] [c] parms getWith
+    where parms = catMaybes [Just $ "query" := q
                             , ("limit"  :=) <$> limit
                             , ("offset" :=) <$> offset
                             ]

@@ -15,6 +15,8 @@ module Database.Orchestrate.Utils
     , api
     , api'
     , api404
+    , apiCheck
+    , apiCheckDecode
     , envSession
     , rot
     , ifMatch
@@ -34,6 +36,7 @@ import           Control.Exception            as Ex
 import           Control.Lens
 import           Control.Monad.Reader
 import           Control.Monad.Error.Class
+import           Data.Aeson
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Builder      as B
 import qualified Data.ByteString.Lazy         as BSL
@@ -42,7 +45,7 @@ import qualified Data.List                    as L
 import           Data.Monoid
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as E
-import           Network.HTTP.Client
+import           Network.HTTP.Client          hiding (responseBody)
 import           Network.HTTP.Types
 import           Network.Wreq
 import           Network.Wreq.Types           hiding (auth)
@@ -115,6 +118,23 @@ api' hdrs paths pairs f = do
     io $ fmap Right (f opts url) `Ex.catch` handler
     where handler (StatusCodeException s _ _) = return $ Left s
           handler e                           = throwIO e
+
+apiCheck :: RequestHeaders -> [T.Text] -> [FormParam]
+         -> (Options -> String -> IO (Response a))
+         -> OrchestrateIO (Response a)
+apiCheck rh rpath rparams handler = do
+    r <- api rh rpath rparams handler
+    checkResponse r
+    return r
+
+apiCheckDecode :: FromJSON a
+               => RequestHeaders -> [T.Text] -> [FormParam]
+               -> (Options -> String -> IO (Response BSL.ByteString))
+               -> OrchestrateIO a
+apiCheckDecode rh rpath rparams handler =
+        apiCheck rh rpath rparams handler
+    >>= orchestrateEither . fmapL errex . eitherDecode . (^. responseBody)
+    where errex = Ex.SomeException . Ex.ErrorCall
 
 api404 :: RequestHeaders -> [T.Text] -> [FormParam]
        -> (Options -> String -> IO (Response a))
