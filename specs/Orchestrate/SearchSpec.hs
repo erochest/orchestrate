@@ -57,11 +57,6 @@ fixtures = map (uncurry Person)
          , "Wicket"
          ]
 
-withFixtures :: IO () -> IO ()
-withFixtures =
-    bracket_ (run' $ mapM_ (`putKV` NoMatch) fixtures)
-             (run' $ mapM_ (`purgeKV` Nothing) fixtures)
-
 runSearch :: OrchestrateIO (SearchList Person)
           -> IO (Either SomeException (SearchList Person))
 runSearch = run
@@ -77,7 +72,7 @@ spec = describe "Database.Orchestrate.Search" $
         pendingWith "commented out."
 
 spec' :: Spec
-spec' = describe "Database.Orchestrate.Search" $ around withFixtures $
+spec' = describe "Database.Orchestrate.Search" $ around (withFixtures fixtures) $
     describe "query" $ do
         it "should search for all fields." $ do
             s <- runSearch $ query "test-coll" "darth" Nothing Nothing

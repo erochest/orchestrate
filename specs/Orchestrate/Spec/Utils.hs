@@ -6,7 +6,7 @@ module Orchestrate.Spec.Utils where
 
 import qualified Control.Exception             as Ex
 
-import           Database.Orchestrate.KeyValue (getKV)
+import           Database.Orchestrate.KeyValue (getKV, purgeKV, putKV)
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
@@ -21,3 +21,8 @@ run' m = envSession >>= runO' m >> return ()
 
 getPerson :: Key -> IO (Either Ex.SomeException (Maybe Person))
 getPerson = run . getKV "test-coll"
+
+withFixtures :: OrchestrateData a => [a] -> IO () -> IO ()
+withFixtures fixtures =
+    Ex.bracket_ (run' $ mapM_ (`putKV` NoMatch) fixtures)
+                (run' $ mapM_ (`purgeKV` NoMatch) fixtures)

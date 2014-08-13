@@ -26,12 +26,11 @@ runRefList :: OrchestrateIO (ResultList (TombstoneItem Person))
            -> IO (Either SomeException (ResultList (TombstoneItem Person)))
 runRefList = run
 
+cats :: [Person]
+cats = map (uncurry Person) . (`zip` [1..]) . take 7 $ repeat "elsa"
+
 withCats :: IO () -> IO ()
-withCats =
-    bracket_ (mapM_ (run' . (`putKV` NoMatch)) cats)
-             (run' $ purgeKV (Person "elsa" undefined) Nothing)
-    where cats = map (uncurry Person) . (`zip` [(1::Int)..]) . take 7
-               $ repeat "elsa"
+withCats = withFixtures cats
 
 spec :: Spec
 spec = describe "Database.Orchestrate.Ref" $ do
