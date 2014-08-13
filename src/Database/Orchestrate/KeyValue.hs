@@ -71,11 +71,11 @@ listKV :: FromJSON v
 listKV c limit (start, end) = do
     r <- api [] [c] ps getWith
     checkResponse r
-    orchestrateEither . note err . decode $ r ^. responseBody
+    orchestrateEither . fmapL errex . eitherDecode $ r ^. responseBody
     where ps = catMaybes [ Just $ "limit" := limit
                          , rangeStart "Key" start
                          , rangeEnd   "Key" end
                          ]
-          err = Ex.SomeException $ Ex.ErrorCall "Invalid JSON returned."
+          errex = Ex.SomeException . Ex.ErrorCall
 
 type KVList v = ResultList (ResultItem Path v)
