@@ -4,11 +4,10 @@
 module Orchestrate.RefSpec where
 
 
-import Data.Aeson
-import Control.Applicative
+import           Data.Aeson
 import qualified Data.ByteString.Lazy as BS
-import Data.Either
-
+import           Data.Either
+import           Control.Applicative
 import           Control.Exception (bracket_, SomeException)
 import           Control.Lens
 import           Data.Maybe
