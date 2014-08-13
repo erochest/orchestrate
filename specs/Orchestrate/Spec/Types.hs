@@ -32,3 +32,8 @@ instance OrchestrateData Person where
     tableName _          = "test-coll"
     dataKey (Person n _) = n
 
+personName :: Functor f => (T.Text -> f T.Text) -> Person -> f Person
+personName f (Person n a) = fmap (`Person` a) (f n)
+
+personAge :: Functor f => (Int -> f Int) -> Person -> f Person
+personAge f (Person n a) = fmap (Person n) (f a)

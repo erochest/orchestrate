@@ -17,9 +17,6 @@ import           Orchestrate.Spec.Types
 import           Orchestrate.Spec.Utils
 
 
-getPerson :: Key -> IO (Either Ex.SomeException (Maybe Person))
-getPerson = run . getKV "test-coll"
-
 spec :: Spec
 spec = describe "Database.Orchestrate.KeyValue" $
     it "should contain tests." $
