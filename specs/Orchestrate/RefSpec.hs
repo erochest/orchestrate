@@ -4,12 +4,12 @@
 module Orchestrate.RefSpec where
 
 
-import           Data.Aeson
-import qualified Data.ByteString.Lazy as BS
-import           Data.Either
 import           Control.Applicative
-import           Control.Exception (bracket_, SomeException)
+import           Control.Exception             (SomeException, bracket_)
 import           Control.Lens
+import           Data.Aeson
+import qualified Data.ByteString.Lazy          as BS
+import           Data.Either
 import           Data.Maybe
 
 import           Test.Hspec

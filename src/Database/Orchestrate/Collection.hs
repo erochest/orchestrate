@@ -7,8 +7,8 @@ module Database.Orchestrate.Collection
 
 
 import           Control.Monad
+import qualified Data.Text                  as T
 import           Network.Wreq
-import qualified Data.Text as T
 
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils

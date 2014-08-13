@@ -24,7 +24,7 @@ import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types           (Parser)
 import qualified Data.HashMap.Strict        as M
-import qualified Data.Text as T
+import qualified Data.Text                  as T
 import           Network.Wreq
 
 import           Database.Orchestrate.Types

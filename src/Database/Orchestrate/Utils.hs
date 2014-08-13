@@ -1,6 +1,7 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# OPTIONS_GHC -Wall #-}
 
 
@@ -34,8 +35,8 @@ import           Control.Applicative
 import           Control.Error
 import           Control.Exception            as Ex
 import           Control.Lens
-import           Control.Monad.Reader
 import           Control.Monad.Error.Class
+import           Control.Monad.Reader
 import           Data.Aeson
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Builder      as B

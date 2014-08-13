@@ -5,11 +5,11 @@
 module Orchestrate.SearchSpec where
 
 
-import           Control.Exception (SomeException, bracket_)
+import           Control.Exception             (SomeException, bracket_)
 import           Control.Lens
-import qualified Data.List as L
+import qualified Data.List                     as L
 import           Data.Monoid
-import qualified Data.Text as T
+import qualified Data.Text                     as T
 
 import           Test.Hspec
 

@@ -21,10 +21,10 @@ import           Control.Applicative
 import           Control.Arrow
 import           Control.Error
 import           Control.Lens
-import           Control.Monad                (join, void)
+import           Control.Monad              (join, void)
 import           Data.Aeson
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as E
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as E
 import           Network.Wreq
 
 import           Database.Orchestrate.Types
