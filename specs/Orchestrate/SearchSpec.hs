@@ -92,10 +92,8 @@ spec' = describe "Database.Orchestrate.Search" $ around withFixtures $
         it "should limit the number of results returned." $ do
             s <- runSearch $ query "test-coll" "darth" (Just 1) Nothing
             s ^?  _Right . searchTotal `shouldBe` Just 3
-            s ^.. allNames
-                `shouldBe` ["Darth Maul"]
+            s ^?  _Right . searchResults . resultCount `shouldBe` Just 1
         it "should offset the results returned." $ do
-            s <- runSearch $ query "test-coll" "darth" (Just 1) (Just 1)
+            s <- runSearch $ query "test-coll" "darth" Nothing (Just 2)
             s ^?  _Right . searchTotal `shouldBe` Just 3
-            s ^.. allNames
-                `shouldBe` ["Darth Vader"]
+            s ^?  _Right . searchResults . resultCount `shouldBe` Just 1
