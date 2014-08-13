@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 
@@ -24,14 +23,9 @@ import           Control.Error
 import qualified Control.Exception            as Ex
 import           Control.Lens
 import           Control.Monad                (join)
-import           Control.Monad.Error.Class
-import           Control.Monad.IO.Class       (liftIO)
 import           Data.Aeson
-import           Data.Monoid
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as E
-import           Network.HTTP.Client          hiding (responseBody)
-import           Network.HTTP.Types.Status    hiding (statusCode)
 import           Network.Wreq
 
 import           Database.Orchestrate.Network
@@ -41,37 +35,9 @@ import           Database.Orchestrate.Utils
 
 -- TODO: Use more-standard names.
 
-
 getKV :: FromJSON v => Collection -> Key -> OrchestrateIO (Maybe v)
-getKV c k = do
-    s <- ask
-    -- I'm not convinced this does what I think it does. But the tests
-    -- pass.
-    er <- liftIO $ Ex.catchJust
-        Ex.fromException
-        (fmapL filterStatusCode <$> runO' (api [] [c, k] [] getWith) s)
-        handler
-    case er of
-        Right r -> checkResponse r >> return (decode $ r ^. responseBody)
-        Left (Just (StatusCodeException (Status 404 _) _ _)) -> return Nothing
-        Left (Just e) -> throwSome e
-        Left Nothing  -> throwSome $ StatusCodeException status418 [] mempty
-
-    where
-        handler :: HttpException -> IO (Either (Maybe HttpException) a)
-        handler e@(StatusCodeException{}) = return . Left $ Just e
-        handler e = Ex.throw e
-
-        onlyStatusCode :: HttpException -> Maybe HttpException
-        onlyStatusCode e@(StatusCodeException{}) = Just e
-        onlyStatusCode _ = Nothing
-
-        filterStatusCode :: Ex.SomeException -> Maybe HttpException
-        filterStatusCode = join . fmap onlyStatusCode . Ex.fromException
-
-        throwSome :: (Ex.Exception e, Monad m, MonadError Ex.SomeException m)
-                  => e -> m a
-        throwSome = throwError . Ex.SomeException
+getKV c k =
+    join . fmap (decode . (^.responseBody)) <$> api404 [] [c, k] [] getWith
 
 putKV :: OrchestrateData v => v -> IfMatch' -> OrchestrateIO Location
 putKV v = putV (dataKey v) v

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# OPTIONS_GHC -Wall #-}
@@ -13,6 +14,7 @@ module Database.Orchestrate.Utils
     , withAuth
     , api
     , api'
+    , api404
     , envSession
     , rot
     , ifMatch
@@ -31,10 +33,10 @@ import           Control.Error
 import           Control.Exception            as Ex
 import           Control.Lens
 import           Control.Monad.Reader
+import           Control.Monad.Error.Class
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Builder      as B
 import qualified Data.ByteString.Lazy         as BSL
-import           Data.CaseInsensitive         hiding (map)
 import           Data.Default
 import qualified Data.List                    as L
 import           Data.Monoid
@@ -114,6 +116,37 @@ api' hdrs paths pairs f = do
     where handler (StatusCodeException s _ _) = return $ Left s
           handler e                           = throwIO e
 
+api404 :: RequestHeaders -> [T.Text] -> [FormParam]
+       -> (Options -> String -> IO (Response a))
+       -> OrchestrateIO (Maybe (Response a))
+api404 hdrs pths parms f = do
+    s  <- ask
+    er <- liftIO $ Ex.catchJust
+        Ex.fromException
+        (fmapL filterStatusCode <$> runO' (api hdrs pths parms f) s)
+        handler
+    case er of
+        Right r -> checkResponse r >> return (Just r)
+        Left (Just (StatusCodeException (Status 404 _) _ _)) -> return Nothing
+        Left (Just e) -> throwSome e
+        Left Nothing  -> throwSome $ StatusCodeException status418 [] mempty
+
+    where
+        handler :: HttpException -> IO (Either (Maybe HttpException) a)
+        handler e@(StatusCodeException{}) = return . Left $ Just e
+        handler e = Ex.throw e
+
+        onlyStatusCode :: HttpException -> Maybe HttpException
+        onlyStatusCode e@(StatusCodeException{}) = Just e
+        onlyStatusCode _ = Nothing
+
+        filterStatusCode :: Ex.SomeException -> Maybe HttpException
+        filterStatusCode = join . fmap onlyStatusCode . Ex.fromException
+
+        throwSome :: (Ex.Exception e, Monad m, MonadError Ex.SomeException m)
+                  => e -> m a
+        throwSome = throwError . Ex.SomeException
+
 envSession :: IO Session
 envSession = do
     key <- T.pack <$> getEnv "ORCHESTRATE_API"
@@ -131,9 +164,6 @@ ifMatch' :: IfMatch' -> [Header]
 ifMatch' (IfMatch r)     = [("If-Match",      E.encodeUtf8 r)]
 ifMatch' (IfNoneMatch r) = [("If-None-Match", E.encodeUtf8 r)]
 ifMatch' NoMatch         = []
-
-withHeader :: CI BS.ByteString -> T.Text -> Options -> Options
-withHeader h r = set (header h) [E.encodeUtf8 r]
 
 -- locationKey :: (T.Text -> T.Text) -> T.Text -> T.Text -> T.Text
 locationKey :: Prism' T.Text T.Text
