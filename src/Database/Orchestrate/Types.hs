@@ -70,9 +70,7 @@ import           Control.Monad.Reader
 import           Data.Aeson
 import           Data.Default
 import qualified Data.Text                 as T
-import           Network.HTTP.Types.Header
 import           Network.Wreq
-import           Network.Wreq.Types
 
 
 type APIKey     = T.Text
