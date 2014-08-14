@@ -25,4 +25,4 @@ getPerson = run . getKV "test-coll"
 withFixtures :: OrchestrateData a => [a] -> IO () -> IO ()
 withFixtures fixtures =
     Ex.bracket_ (run' $ mapM_ (`putKV` NoMatch) fixtures)
-                (run' $ mapM_ (`purgeKV` NoMatch) fixtures)
+                (run' $ mapM_ (`purgeKV` Nothing) fixtures)
