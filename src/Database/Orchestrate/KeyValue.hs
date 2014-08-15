@@ -41,12 +41,12 @@ putKV :: OrchestrateData v => v -> IfMatch' -> OrchestrateIO Location
 putKV v = putV (dataKey v) v
 
 putV :: OrchestrateData v => Key -> v -> IfMatch' -> OrchestrateIO Location
-putV k v m =   E.decodeUtf8 . view (responseHeader "Location")
-           <$> api (ifMatch' m) [tableName v, k] [] (rot putWith v')
+putV k v m =
+    getLocation <$> api (ifMatch' m) [tableName v, k] [] (rot putWith v')
     where v' = toJSON v
 
 postV :: OrchestrateData v => v -> OrchestrateIO (Location, Maybe Key)
-postV v =   (id &&& firstOf locationKey) . E.decodeUtf8 . view (responseHeader "Location")
+postV v =   (id &&& firstOf locationKey) . getLocation
         <$> api [] [tableName v] [] (rot postWith (toJSON v))
 
 deleteKV :: OrchestrateData v => v -> IfMatch -> OrchestrateIO ()
@@ -66,7 +66,7 @@ purgeV k v m =
 listKV :: FromJSON v
        => Collection -> Maybe Int -> Range Key -> OrchestrateIO (KVList v)
 listKV c limit (start, end) = apiCheckDecode [] [c] ps getWith
-    where ps = catMaybes [ Just $ "limit" := limit
+    where ps = catMaybes [ ("limit" :=) <$> limit
                          , rangeStart "Key" start
                          , rangeEnd   "Key" end
                          ]

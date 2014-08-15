@@ -33,6 +33,7 @@ module Database.Orchestrate.Utils
     , rangeStart
     , rangeEnd
     , tshow
+    , initTail
     ) where
 
 
@@ -86,15 +87,17 @@ buildUrl :: Monad m => [T.Text] -> [FormParam] -> OrchestrateT m String
 buildUrl paths parms = do
     url <- view sessionURL
     v   <- view sessionVersion
-    let parms' = if L.null parms
-                     then mempty
-                     else mappend "?"
+    let (p, initPath) = initTail paths
+        pbuilder   = maybe mempty textb p
+        parms' = if L.null parms
+                     then pbuilder
+                     else mappend (pbuilder <> "?")
                             . mconcat
                             . L.intersperse "&"
                             . map (uncurry $ jn "=")
                             . over (traverse . both) B.byteString
                             $ map toPair parms
-        paths' = foldr (jn "/" . B.byteString . E.encodeUtf8) parms' paths
+        paths' = foldr (jn "/" . textb) parms' initPath
     return . T.unpack
            . E.decodeUtf8
            . BSL.toStrict
@@ -105,6 +108,7 @@ buildUrl paths parms = do
                      ]
     where jn j x y = x <> j <> y
           toPair (k := v) = (k, renderFormValue v)
+          textb = B.byteString . E.encodeUtf8
 
 hPair :: Options -> Header -> Options
 hPair o (k, v) = o & header k .~ [v]
@@ -140,7 +144,7 @@ apiCheckDecode rh rpath rparams handler =
     >>= orchestrateEither . fmapL errex . eitherDecode . (^. responseBody)
     where errex = Ex.SomeException . Ex.ErrorCall
 
-api404 :: RequestHeaders -> [T.Text] -> [FormParam] -> RestCall a
+api404 :: Show a => RequestHeaders -> [T.Text] -> [FormParam] -> RestCall a
        -> OrchestrateIO (Maybe (Response a))
 api404 hdrs pths parms f = do
     s  <- ask
@@ -233,3 +237,8 @@ rangeEnd _ Open          = Nothing
 
 tshow :: Show a => a -> T.Text
 tshow = T.pack . show
+
+initTail :: [a] -> (Maybe a, [a])
+initTail []     = (Nothing, [])
+initTail [x]    = (Just x,  [])
+initTail (x:xs) = (x:) <$> initTail xs
