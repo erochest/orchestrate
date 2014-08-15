@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# OPTIONS_GHC -Wall #-}
 
@@ -22,8 +23,12 @@ module Database.Orchestrate.Utils
     , rot
     , ifMatch
     , ifMatch'
+    , locationCollection
     , locationKey
     , locationRef
+    , locationType
+    , locationTimestamp
+    , locationOrdinal
     , getLocation
     , rangeStart
     , rangeEnd
@@ -46,6 +51,7 @@ import qualified Data.List                    as L
 import           Data.Monoid
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as E
+import qualified Data.Text.Read               as TR
 import           Network.HTTP.Client          hiding (responseBody)
 import           Network.HTTP.Types
 import           Network.Wreq
@@ -182,12 +188,35 @@ ifMatch' (IfMatch r)     = [("If-Match",      E.encodeUtf8 r)]
 ifMatch' (IfNoneMatch r) = [("If-None-Match", E.encodeUtf8 r)]
 ifMatch' NoMatch         = []
 
--- locationKey :: (T.Text -> T.Text) -> T.Text -> T.Text -> T.Text
+loc :: Int -> Prism' T.Text T.Text
+loc n = prism' (mappend $ T.replicate (n - 1) "/")
+               ((`atMay` n) . T.split (=='/'))
+
+locint :: (Integral i, Show i) => Int -> Prism' T.Text i
+locint n = prism' (mappend prefix . T.pack . show)
+                  ( join
+                  . fmap (hush . fmap fst . TR.decimal)
+                  . (`atMay` n)
+                  . T.split (=='/'))
+    where prefix = T.replicate (n - 1) "/"
+
+locationCollection :: Prism' T.Text T.Text
+locationCollection = loc 2
+
 locationKey :: Prism' T.Text T.Text
-locationKey = prism' (mappend "//") ((`atMay` 3) . T.split (=='/'))
+locationKey = loc 3
 
 locationRef :: Prism' T.Text T.Text
-locationRef = prism' (mappend "////") ((`atMay` 5) . T.split (=='/'))
+locationRef = loc 5
+
+locationType :: Prism' T.Text T.Text
+locationType = loc 5
+
+locationTimestamp :: Prism' T.Text Integer
+locationTimestamp = locint 6
+
+locationOrdinal :: Prism' T.Text Int
+locationOrdinal = locint 7
 
 getLocation :: Response a -> T.Text
 getLocation = E.decodeUtf8 . view (responseHeader "Location")
