@@ -23,8 +23,6 @@ import           Database.Orchestrate.Utils
 import           Orchestrate.Spec.Types
 import           Orchestrate.Spec.Utils
 
-import Debug.Trace
-
 
 type GetEvent = IO (Either SomeException (Maybe (EventItem Event Person)))
 
@@ -56,7 +54,7 @@ withEvents' :: Person -> EventType -> [(Event, Timestamp)]
 withEvents' p et evs action =
     bracket (run . mapM (uncurry (createEvent p et)) $ map (fmap Just) evs)
             (either (const $ return ()) deleteLocs)
-            (action >=> return . trace "ACTION DONE")
+            action
 
 callLoc :: Location -> (Timestamp -> Int -> OrchestrateIO a)
         -> IO (Either SomeException a)
