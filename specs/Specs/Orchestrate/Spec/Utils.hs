@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-module Orchestrate.Spec.Utils where
+module Specs.Orchestrate.Spec.Utils where
 
 
 import qualified Control.Exception             as Ex
@@ -10,7 +10,7 @@ import           Database.Orchestrate.KeyValue (getKV, purgeKV, putKV)
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
-import           Orchestrate.Spec.Types
+import           Specs.Orchestrate.Spec.Types
 
 
 run :: OrchestrateIO m -> IO (Either Ex.SomeException m)

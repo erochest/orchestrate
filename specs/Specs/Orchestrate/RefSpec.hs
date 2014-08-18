@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-module Orchestrate.RefSpec where
+module Specs.Orchestrate.RefSpec where
 
 
 import           Control.Applicative
@@ -20,8 +20,8 @@ import           Database.Orchestrate.Ref
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
-import           Orchestrate.Spec.Types
-import           Orchestrate.Spec.Utils
+import           Specs.Orchestrate.Spec.Types
+import           Specs.Orchestrate.Spec.Utils
 
 runRefList :: OrchestrateIO (ResultList (TombstoneItem Person))
            -> IO (Either SomeException (ResultList (TombstoneItem Person)))

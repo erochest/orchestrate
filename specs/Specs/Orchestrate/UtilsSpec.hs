@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-module OrchestrateSpec where
+module Specs.Orchestrate.UtilsSpec where
 
 
 import           Control.Lens

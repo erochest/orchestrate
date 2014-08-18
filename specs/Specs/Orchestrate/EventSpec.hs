@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-module Orchestrate.EventSpec where
+module Specs.Orchestrate.EventSpec where
 
 
 import           Control.Applicative
@@ -21,8 +21,8 @@ import           Database.Orchestrate.KeyValue
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
-import           Orchestrate.Spec.Types
-import           Orchestrate.Spec.Utils
+import           Specs.Orchestrate.Spec.Types
+import           Specs.Orchestrate.Spec.Utils
 
 
 type GetEvent = IO (Either SomeException (Maybe (EventItem Event Person)))

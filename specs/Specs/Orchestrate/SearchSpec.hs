@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes        #-}
 
 
-module Orchestrate.SearchSpec where
+module Specs.Orchestrate.SearchSpec where
 
 
 import           Control.Exception             (SomeException, bracket_)
@@ -18,8 +18,8 @@ import           Database.Orchestrate.KeyValue
 import           Database.Orchestrate.Search
 import           Database.Orchestrate.Types
 
-import           Orchestrate.Spec.Types
-import           Orchestrate.Spec.Utils
+import           Specs.Orchestrate.Spec.Types
+import           Specs.Orchestrate.Spec.Utils
 
 
 -- From http://www.empireonline.com/features/30-star-wars-characters

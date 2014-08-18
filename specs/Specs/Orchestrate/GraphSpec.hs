@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-module Orchestrate.GraphSpec where
+module Specs.Orchestrate.GraphSpec where
 
 
 import           Control.Exception
@@ -16,8 +16,8 @@ import           Database.Orchestrate.KeyValue
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
-import           Orchestrate.Spec.Types
-import           Orchestrate.Spec.Utils
+import           Specs.Orchestrate.Spec.Types
+import           Specs.Orchestrate.Spec.Utils
 
 
 -- Names for 2014 tropical cyclones (from NOAA).

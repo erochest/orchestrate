@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-module Orchestrate.KeyValueSpec where
+module Specs.Orchestrate.KeyValueSpec where
 
 
 import           Control.Lens                  hiding ((.=))
@@ -14,8 +14,8 @@ import           Test.Hspec
 import           Database.Orchestrate.KeyValue
 import           Database.Orchestrate.Types
 
-import           Orchestrate.Spec.Types
-import           Orchestrate.Spec.Utils
+import           Specs.Orchestrate.Spec.Types
+import           Specs.Orchestrate.Spec.Utils
 
 
 #if NETWORK_SPECS

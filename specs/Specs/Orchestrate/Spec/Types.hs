@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-module Orchestrate.Spec.Types where
+module Specs.Orchestrate.Spec.Types where
 
 
 import           Control.Applicative
