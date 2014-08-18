@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -66,13 +67,9 @@ eithererr loc = orchestrateEither
               . note (SomeException
                         (ErrorCall $ "Invalid location: " ++ T.unpack loc))
 
+#if NETWORK_SPECS
 spec :: Spec
-spec = describe "Database.Orchestrate.Events" $
-    it "should contain tests." $
-        pendingWith "commented out."
-
-spec' :: Spec
-spec' = describe "Database.Orchestrate.Events" $ around (withFixtures fixtures) $ do
+spec = describe "Database.Orchestrate.Events" $ around (withFixtures fixtures) $ do
     describe "createEvent" $
         it "should create events." $
             withEvents' (fixtures !! 1) "create" events $ \locs -> do
@@ -122,3 +119,10 @@ spec' = describe "Database.Orchestrate.Events" $ around (withFixtures fixtures) 
             elist ^? _Right . resultCount `shouldBe` Just (length events)
             elist ^.. _Right . resultList . traverse . eventItem . itemValue . eventTitle
                 `shouldMatchList` ["birth", "marriage", "child", "divorce", "death"]
+
+#else
+spec :: Spec
+spec = describe "Database.Orchestrate.Events" $
+    it "should contain tests." $
+        pendingWith "configure with \"--enable-tests -fnetwork-specs\"."
+#endif

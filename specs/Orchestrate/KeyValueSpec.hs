@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 
@@ -17,13 +18,9 @@ import           Orchestrate.Spec.Types
 import           Orchestrate.Spec.Utils
 
 
+#if NETWORK_SPECS
 spec :: Spec
-spec = describe "Database.Orchestrate.KeyValue" $ do
-    it "should contain tests." $
-        pendingWith "commented out."
-
-spec' :: Spec
-spec' = do
+spec = do
     describe "getKV" $
         it "should return Nothing if the key isn't there." $ do
             r <- getPerson "name"
@@ -58,3 +55,10 @@ spec' = do
             _resultCount kvl `shouldBe` 3
             L.sort (map (name . _itemValue) (_resultList kvl)) `shouldBe` names
             run' $ mapM_ ((`purgeKV` Nothing) . (`Person` undefined)) names
+
+#else
+spec :: Spec
+spec = describe "Database.Orchestrate.KeyValue" $ do
+    it "should contain tests." $
+        pendingWith "configure with \"--enable-tests -fnetwork-specs\"."
+#endif

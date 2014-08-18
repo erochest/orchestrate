@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
@@ -66,13 +67,9 @@ allNames :: forall c. (T.Text -> Const (Endo [T.Text]) T.Text)
          -> Const (Endo [T.Text]) (Either c (SearchList Person))
 allNames = _Right . searchResults . resultList . traverse . searchItem . itemValue . personName
 
+#if NETWORK_SPECS
 spec :: Spec
-spec = describe "Database.Orchestrate.Search" $
-    it "should contain tests." $
-        pendingWith "commented out."
-
-spec' :: Spec
-spec' = describe "Database.Orchestrate.Search" $ around (withFixtures fixtures) $
+spec = describe "Database.Orchestrate.Search" $ around (withFixtures fixtures) $
     describe "query" $ do
         it "should search for all fields." $ do
             s <- runSearch $ query "test-coll" "darth" Nothing Nothing
@@ -92,3 +89,10 @@ spec' = describe "Database.Orchestrate.Search" $ around (withFixtures fixtures) 
             s <- runSearch $ query "test-coll" "darth" Nothing (Just 2)
             s ^?  _Right . searchTotal `shouldBe` Just 3
             s ^?  _Right . searchResults . resultCount `shouldBe` Just 1
+
+#else
+spec :: Spec
+spec = describe "Database.Orchestrate.Search" $
+    it "should contain tests." $
+        pendingWith "configure with \"--enable-tests -fnetwork-specs\"."
+#endif

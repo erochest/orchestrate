@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 
@@ -28,6 +29,7 @@ fixtures = [ Person "Bertha"    1    -- 0
            ]
 
 
+#if NETWORK_SPECS
 spec :: Spec
 spec = describe "Database.Orchestrate.Graph" $ around (withFixtures fixtures) $ do
     describe "createRel and getRel" $
@@ -48,3 +50,10 @@ spec = describe "Database.Orchestrate.Graph" $ around (withFixtures fixtures) $ 
             void . run' $ deleteRel fay "sister" laura
             r <- (run $ getRel fay "sister" []) :: IO (Either SomeException (RelList Person Person))
             r ^? _Right . resultCount `shouldBe` Just 0
+
+#else
+spec :: Spec
+spec = describe "Database.Orchestrate.Graph" $
+    it "should contain tests." $
+        pendingWith "configure with \"--enable-tests -fnetwork-specs\"."
+#endif

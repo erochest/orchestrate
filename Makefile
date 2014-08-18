@@ -39,7 +39,7 @@ distclean: clean
 	cabal sandbox delete
 
 configure: clean
-	cabal configure --enable-tests
+	cabal configure --enable-tests -fnetwork-specs
 
 deps: clean
 	cabal install --only-dependencies --allow-newer --enable-tests

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 
@@ -32,13 +33,9 @@ cats = map (uncurry Person) . (`zip` [1..]) . take 7 $ repeat "elsa"
 withCats :: IO () -> IO ()
 withCats = withFixtures cats
 
+#if NETWORK_SPECS
 spec :: Spec
-spec = describe "Database.Orchestrate.Ref" $ do
-    it "should contain tests." $
-        pendingWith "commented out."
-
-spec' :: Spec
-spec' = do
+spec = do
     describe "getRef" $
         it "can return old version of objects." $ do
             r <- run $ putKV (Person "eric" 42) NoMatch
@@ -78,3 +75,10 @@ spec' = do
             refs ^.. _Right . resultList . to length `shouldBe` [3]
             refs ^.. _Right . resultList . traverse . _LiveItem . liveValue . _Just . personAge
                 `shouldBe` [5, 4, 3]
+
+#else
+spec :: Spec
+spec = describe "Database.Orchestrate.Ref" $ do
+    it "should contain tests." $
+        pendingWith "configure with \"--enable-tests -fnetwork-specs\"."
+#endif
