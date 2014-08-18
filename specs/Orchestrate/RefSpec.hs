@@ -35,7 +35,7 @@ withCats = withFixtures cats
 
 #if NETWORK_SPECS
 spec :: Spec
-spec = do
+spec = describe "Database.Orchestrate.Ref" $ do
     describe "getRef" $
         it "can return old version of objects." $ do
             r <- run $ putKV (Person "eric" 42) NoMatch

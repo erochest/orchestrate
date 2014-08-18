@@ -20,7 +20,7 @@ import           Orchestrate.Spec.Utils
 
 #if NETWORK_SPECS
 spec :: Spec
-spec = do
+spec = describe "Database.Orchestrate.KeyValue" $ do
     describe "getKV" $
         it "should return Nothing if the key isn't there." $ do
             r <- getPerson "name"
