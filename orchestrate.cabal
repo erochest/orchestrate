@@ -75,3 +75,4 @@ test-suite orchestrate-specs
 source-repository this
   type:                git
   location:            git://github.com/erochest/orchestrate.git
+  tag:                 0.1.0.0
