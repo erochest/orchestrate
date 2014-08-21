@@ -10,50 +10,64 @@
 -- TODO: Clean this up some. Eeek.
 
 module Database.Orchestrate.Types
-    ( APIKey
+    (
+    -- * Types
+    -- ** General Aliases
+      APIKey
     , Collection
     , Key
     , Ref
     , Timestamp
     , Location
-    , IfMatch
-    , IfMatch'(..)
-    , Range
-    , RangeEnd(..)
+    , RestCall
+    -- ** Result Limits
     , Limit
     , Offset
-    , RestCall
+    -- ** Conditional API Calls
+    , IfMatch
+    , IfMatch'(..)
+    -- ** Ranges
+    , Range
+    , RangeEnd(..)
 
+    -- * Session
     , Session(..)
     , sessionURL
     , sessionKey
     , sessionVersion
     , sessionOptions
 
+    -- * Orchestrate Types
+    -- ** Data
     , OrchestrateData(..)
+    -- ** Monad Types
     , OrchestrateT(..)
     , OrchestrateIO
     , Orchestrate
-    , orchestrateEither
 
+    -- * Type Utilities
+    -- ** Lifting
+    , orchestrateEither
+    , io
+    -- ** Accessing Data
     , ask
     , asks
-
-    , io
-
+    -- ** Throwing and Handling Errors
     , throwError
     , catchError
 
+    -- * Result Types
+    -- ** Lists of Results
     , ResultList(..)
     , resultCount
     , resultList
     , resultPrev
     , resultNext
-
+    -- ** Individual Results
     , ResultItem(..)
     , itemPath
     , itemValue
-
+    -- ** Rich Item Locations (Paths)
     , Path(..)
     , itemCollection
     , itemKey
@@ -83,24 +97,35 @@ type Location   = T.Text
 type IfMatch    = Maybe Ref
 type Limit      = Int
 type Offset     = Int
+
+-- | This represents a function that makes a call to the Orchestrate API
+-- server. It takes 'Options', a URL 'String', and returns a 'Response'.
 type RestCall a = Options -> String -> IO (Response a)
 
-data IfMatch'   = IfMatch Ref
-                | IfNoneMatch Ref
-                | NoMatch
+-- TODO: flip which one has the prime mark.
+
+-- | A richer type than 'IfMatch' for specifying conditional calls.
+data IfMatch'   = IfMatch Ref       -- ^ Only perform the action if the ref does exist.
+                | IfNoneMatch Ref   -- ^ Only perform the action if the ref does not exist.
+                | NoMatch           -- ^ Always perform the action.
                 deriving (Show)
 
+-- | This is a range tuple. Each end can be specified separately.
 type Range a    = (RangeEnd a, RangeEnd a)
-data RangeEnd a = Inclusive a
-                | Exclusive a
-                | Open
+
+-- | This represents the end of a range.
+data RangeEnd a = Inclusive a   -- ^ The end should be inclusive. I.e., it should include @a@.
+                | Exclusive a   -- ^ The end should be exclusive. I.e., it should not include @a@.
+                | Open          -- ^ There is no bound on this end.
                 deriving (Show, Functor)
 
+-- | The data for a session with the Orchestrate database.
 data Session = Session
-             { _sessionURL     :: !T.Text
-             , _sessionKey     :: !APIKey
-             , _sessionVersion :: !Int
-             , _sessionOptions :: !Options
+             { _sessionURL     :: !T.Text       -- ^ The base URL for the Orchestrate API.
+             , _sessionKey     :: !APIKey       -- ^ The API key for accessing the API.
+             , _sessionVersion :: !Int          -- ^ The version of the API.
+             , _sessionOptions :: !Options      -- ^ The baseline set of 'Options' for making
+                                                -- wreq calls. This includes the API key.
              } deriving (Show)
 $(makeLenses ''Session)
 
@@ -109,10 +134,18 @@ instance Default Session where
         $ defaults & header "Content-Type" .~ ["application/json"]
                    & header "Accept"       .~ ["application/json"]
 
+-- | This is a class for data that can be stored in an Orchestrate
+-- <http://orchestrate.io/api/keyvalue Key/Value> store. See
+-- "Database.Orchestrate.KeyValue" for where this is used.
 class (ToJSON a, FromJSON a) => OrchestrateData a where
-    tableName :: a -> T.Text
-    dataKey   :: a -> T.Text
+    -- | This is the name of the collection to store this data type in.
+    tableName :: a -> Collection
+    -- | This is the key to store the value in.
+    dataKey   :: a -> Key
 
+-- | The type for the Orchestrate monad. All interactions with the
+-- Orchestrate API are run in this monad. It combines a reader over
+-- 'Session' data with error handling using 'EitherT' 'Ex.SomeException'.
 newtype OrchestrateT m a
     = OrchestrateT
     { runOrchestrate :: EitherT Ex.SomeException (ReaderT Session m) a }
@@ -128,6 +161,7 @@ instance Monad m => MonadReader Session (OrchestrateT m) where
     ask     = OrchestrateT . lift $ ask
     local f = OrchestrateT . local f . runOrchestrate
 
+-- | Lifts an IO action into the 'OrchestrateT' monad.
 io :: MonadIO m => IO a -> OrchestrateT m a
 io = OrchestrateT . syncIO
 
@@ -148,17 +182,24 @@ handler' :: Monad m
 handler' _ (Right v) = return v
 handler' f (Left e)  = f e
 
+-- | Lifts an 'Either' value into the 'OrchestrateT' monad.
 orchestrateEither :: Monad m
                   => Either Ex.SomeException a -> OrchestrateT m a
 orchestrateEither = OrchestrateT . hoistEither
 
+-- | 'OrchestrateT' over 'Identity'. Only the most useless monad ever.
 type Orchestrate   = OrchestrateT Identity
+
+-- | 'OrchestrateT' over 'IO', the way God intended.
 type OrchestrateIO = OrchestrateT IO
 
+-- | This represents the unique access information for a value in the
+-- store.
 data Path = Path
-          { _itemCollection :: !T.Text
-          , _itemKey        :: !T.Text
-          , _itemRef        :: !T.Text
+          { _itemCollection :: !Collection  -- ^ The collection containing the data.
+          , _itemKey        :: !Key         -- ^ The data's key in the collection.
+          , _itemRef        :: !Ref         -- ^ The reference to the current version
+                                            -- of the value.
           } deriving (Show)
 $(makeLenses ''Path)
 
@@ -169,6 +210,9 @@ instance FromJSON Path where
                          <*> o .: "ref"
     parseJSON _          =   mzero
 
+-- | A parameterized list of results returned by an API call.
+--
+-- [@i@] the type of the data contained.
 data ResultList i = ResultList
                   { _resultCount :: !Int
                   , _resultList  :: ![i]
@@ -185,6 +229,10 @@ instance FromJSON r => FromJSON (ResultList r) where
                          <*> o .:? "next"
     parseJSON _          =   mzero
 
+-- | A parameterized single item returned in a collection by an API call.
+--
+-- [@p@] the type of the path data to this data.
+-- [@v@] the type of the value for this data.
 data ResultItem p v = ResultItem
                     { _itemPath  :: !p
                     , _itemValue :: !v

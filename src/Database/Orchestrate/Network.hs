@@ -1,6 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
+{- |
+This module implements some network-oriented utility functions.
+-}
+
 module Database.Orchestrate.Network
     ( checkResponse
     , checkStatusCode
@@ -14,9 +18,15 @@ import           Network.Wreq
 import           Database.Orchestrate.Types
 
 
+-- | This takes a response and checks that the status code passes.
+--
+-- If the HTTP status code is not OK, this returns an error in the
+-- 'OrchestrateT' monad.
 checkResponse :: Monad m => Response a -> OrchestrateT m ()
 checkResponse = checkStatusCode . view (responseStatus . statusCode)
 
+-- | This checks the status code. Currently 200 and 204 are OK. Everything
+-- else is bad. Bad codes throw an exception in 'OrchestrateT'.
 checkStatusCode :: Monad m => Int -> OrchestrateT m ()
 checkStatusCode 200 = return ()
 checkStatusCode 204 = return ()

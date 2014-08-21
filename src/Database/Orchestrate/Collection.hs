@@ -1,6 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
+{-|
+This implements the <http://orchestrate.io/api/collections API calls> to
+manage collections on Orchestrate.
+-}
+
 module Database.Orchestrate.Collection
     ( deleteCollection
     ) where
@@ -14,6 +19,13 @@ import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
 
-deleteCollection :: Collection -> OrchestrateIO ()
+-- | This deletes a collection. See
+-- <http://orchestrate.io/api/collections#delete the API documentation> for
+-- more information.
+--
+-- > deleteCollection "collection-name"
+
+deleteCollection :: Collection          -- ^ The name of the collection.
+                 -> OrchestrateIO ()
 deleteCollection c =
     void $ apiCheck [] [c] ["force" := ("true" :: T.Text)] deleteWith
