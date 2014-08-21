@@ -38,15 +38,15 @@ spec :: Spec
 spec = describe "Database.Orchestrate.Ref" $ do
     describe "getRef" $
         it "can return old version of objects." $ do
-            r <- run $ putKV (Person "eric" 42) NoMatch
+            r <- run $ putV (Person "eric" 42) NoMatch
             let ref = r ^? _Right . locationRef
             ref `shouldSatisfy` isn't _Nothing
 
-            run' $ putKV (Person "eric" 44) NoMatch
+            run' $ putV (Person "eric" 44) NoMatch
             eric <- run . getRef "test-coll" "eric" $ fromJust ref
             eric ^? _Right . _Just . personAge `shouldBe` Just 42
 
-            run' $ purgeKV (Person "eric" undefined) Nothing
+            run' $ purgeV (Person "eric" undefined) Nothing
 
     describe "decoding ResultList (TombstoneItem Person)." $ do
         it "should work." $ do

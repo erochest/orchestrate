@@ -5,8 +5,9 @@ module Specs.Orchestrate.Spec.Utils where
 
 
 import qualified Control.Exception             as Ex
+import           Prelude                       hiding (lookup)
 
-import           Database.Orchestrate.KeyValue (getKV, purgeKV, putKV)
+import           Database.Orchestrate.KeyValue (lookup, purgeV, putV)
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
@@ -20,9 +21,9 @@ run' :: OrchestrateIO m -> IO ()
 run' m = envSession >>= runO' m >> return ()
 
 getPerson :: Key -> IO (Either Ex.SomeException (Maybe Person))
-getPerson = run . getKV "test-coll"
+getPerson = run . lookup "test-coll"
 
 withFixtures :: OrchestrateData a => [a] -> IO () -> IO ()
 withFixtures fixtures =
-    Ex.bracket_ (run' $ mapM_ (`putKV` NoMatch) fixtures)
-                (run' $ mapM_ (`purgeKV` Nothing) fixtures)
+    Ex.bracket_ (run' $ mapM_ (`putV` NoMatch) fixtures)
+                (run' $ mapM_ (`purgeV` Nothing) fixtures)

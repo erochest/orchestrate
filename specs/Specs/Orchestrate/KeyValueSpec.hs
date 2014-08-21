@@ -21,13 +21,13 @@ import           Specs.Orchestrate.Spec.Utils
 #if NETWORK_SPECS
 spec :: Spec
 spec = describe "Database.Orchestrate.KeyValue" $ do
-    describe "getKV" $
+    describe "getV" $
         it "should return Nothing if the key isn't there." $ do
             r <- getPerson "name"
             r `shouldSatisfy` isn't (_Right . _Just)
-    describe "putKV" $
+    describe "putV" $
         it "should insert a value into the database." $ do
-            r <- run $ putKV (Person "eric" 44) NoMatch
+            r <- run $ putV (Person "eric" 44) NoMatch
             r `shouldSatisfy` isRight
             r' <- getPerson "eric"
             r' ^? _Right . _Just `shouldBe` Just (Person "eric" 44)
@@ -37,24 +37,24 @@ spec = describe "Database.Orchestrate.KeyValue" $ do
             Right (_, Just k) <- run (postV elsa)
             e <- getPerson k
             e ^? _Right . _Just `shouldBe` Just (Person "elsa" 10)
-            run' $ purgeV k (Person "elsa" undefined) Nothing
-    describe "deleteKV" $
+            run' $ purgeKV k (Person "elsa" undefined) Nothing
+    describe "deleteV" $
         it "should remove a value from the database." $ do
-            r <- run $ deleteKV (Person "eric" undefined) Nothing
+            r <- run $ deleteV (Person "eric" undefined) Nothing
             r `shouldSatisfy` isRight
             r' <- getPerson "eric"
             r' `shouldSatisfy` isn't (_Right . _Just)
-    describe "listKV" $
+    describe "listVals" $
         it "should retrieve values from the database." $ do
             let names = ["abbie", "bob", "carol"]
-            r <- run . mapM_ ((`putKV` NoMatch) . uncurry Person) $ zip names [1..]
+            r <- run . mapM_ ((`putV` NoMatch) . uncurry Person) $ zip names [1..]
             r `shouldSatisfy` isRight
-            r' <- run $ listKV "test-coll" Nothing (Open, Open)
+            r' <- run $ listVals "test-coll" Nothing (Open, Open)
             r' `shouldSatisfy` isRight
             let Right kvl = r'
             _resultCount kvl `shouldBe` 3
             L.sort (map (name . _itemValue) (_resultList kvl)) `shouldBe` names
-            run' $ mapM_ ((`purgeKV` Nothing) . (`Person` undefined)) names
+            run' $ mapM_ ((`purgeV` Nothing) . (`Person` undefined)) names
 
 #else
 spec :: Spec
