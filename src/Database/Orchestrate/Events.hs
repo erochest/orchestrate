@@ -161,11 +161,11 @@ updateEvent :: (OrchestrateData a, ToJSON b)
             -> b                -- ^ The updated event data.
             -> Timestamp        -- ^ The timestamp for the event.
             -> Int              -- ^ The ordinal for the event.
-            -> IfMatch          -- ^ If given, will only succeed if the ref matches
+            -> IfMatch'         -- ^ If given, will only succeed if the ref matches
                                 -- the event's currently stored ref.
             -> OrchestrateIO Location   -- ^ Returns the 'Location' for the new event data.
 updateEvent a eType e ts o m =
-    getLocation <$> api (ifMatch m) up [] (rot putWith (toJSON e))
+    getLocation <$> api (ifMatch' m) up [] (rot putWith (toJSON e))
     where up = urlPath a eType ts o
 
 -- | This deletes an event. See the <http://orchestrate.io/api/events API documentation>
@@ -181,11 +181,11 @@ deleteEvent :: OrchestrateData a
             -> EventType            -- ^ The kind of event.
             -> Timestamp            -- ^ The timestamp for the event.
             -> Int                  -- ^ The ordinal for the event.
-            -> IfMatch              -- ^ If given, will only succeed if the ref matches
+            -> IfMatch'             -- ^ If given, will only succeed if the ref matches
                                     -- the event's currently stored ref.
             -> OrchestrateIO ()
 deleteEvent a eType ts o m =
-    void $ apiCheck (ifMatch m) url ["purge" := ("true" :: T.Text)] deleteWith
+    void $ apiCheck (ifMatch' m) url ["purge" := ("true" :: T.Text)] deleteWith
     where url = urlPath a eType ts o
 
 -- | This lists all the events within a given range for a data. See the

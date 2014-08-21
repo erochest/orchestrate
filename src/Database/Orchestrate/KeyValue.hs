@@ -60,7 +60,7 @@ lookup c k =
 -- > putV data NoMatch
 putV :: OrchestrateData v
      => v                          -- ^ The data to store in the database.
-     -> IfMatch'                   -- ^ If specified, this operation only succeeds
+     -> IfMatch                    -- ^ If specified, this operation only succeeds
                                    -- if the ref specified matches the
                                    -- currently stored ref for this data.
      -> OrchestrateIO Location     -- ^ Returns the location of the data.
@@ -75,12 +75,12 @@ putV v = putKV (dataKey v) v
 putKV :: OrchestrateData v
       => Key                     -- ^ The key to store the data under.
       -> v                       -- ^ The data to store.
-      -> IfMatch'                -- ^ If specified, this operation only succeeds
+      -> IfMatch                 -- ^ If specified, this operation only succeeds
                                  -- if the ref specified matches the currently
                                  -- stored ref for this data.
       -> OrchestrateIO Location  -- ^ Returns the location of the data.
 putKV k v m =
-    getLocation <$> api (ifMatch' m) [tableName v, k] [] (rot putWith v')
+    getLocation <$> api (ifMatch m) [tableName v, k] [] (rot putWith v')
     where v' = toJSON v
 
 -- | This inserts data in the database, generating a new database key for
@@ -98,7 +98,7 @@ postV v =   (id &&& firstOf locationKey) . getLocation
 -- > deleteV data Nothing
 deleteV :: OrchestrateData v
          => v                   -- ^ The data to remove.
-         -> IfMatch             -- ^ If given, this operation only succeeds
+         -> IfMatch'            -- ^ If given, this operation only succeeds
                                 -- if the ref specified matches the currently
                                 -- stored ref for this data.
          -> OrchestrateIO ()
@@ -110,11 +110,11 @@ deleteV v = deleteKV (dataKey v) v
 deleteKV :: OrchestrateData v
          => Key                  -- ^ The key the data is stored under.
          -> v                    -- ^ The data to remove.
-         -> IfMatch              -- ^ If given, this operation only succeeds
+         -> IfMatch'             -- ^ If given, this operation only succeeds
                                  -- if the ref specified matches the
                                  -- currently stored ref for this data.
          -> OrchestrateIO ()
-deleteKV k v m = void $ apiCheck (ifMatch m) [tableName v, k] [] deleteWith
+deleteKV k v m = void $ apiCheck (ifMatch' m) [tableName v, k] [] deleteWith
 
 -- | This purges data from the database. Purging not only removes the data,
 -- but also all history and secondary items for it.
@@ -122,7 +122,7 @@ deleteKV k v m = void $ apiCheck (ifMatch m) [tableName v, k] [] deleteWith
 -- > purgeV data Nothing
 purgeV :: OrchestrateData v
        => v                    -- ^ The data to remove.
-       -> IfMatch              -- ^ If given, this operation only succeeds
+       -> IfMatch'             -- ^ If given, this operation only succeeds
                                -- if the ref specified matches the
                                -- currently stored ref for this data.
        -> OrchestrateIO ()
@@ -135,12 +135,12 @@ purgeV v = purgeKV (dataKey v) v
 purgeKV :: OrchestrateData v
         => Key                   -- ^ The key the data is stored under.
         -> v                     -- ^ The data to remove.
-        -> IfMatch               -- ^ If given, this operation only succeeds
+        -> IfMatch'              -- ^ If given, this operation only succeeds
                                  -- if the ref specified matches the
                                  -- currently stored ref for this data.
         -> OrchestrateIO ()
 purgeKV k v m =
-    void $ apiCheck (ifMatch m) [tableName v, k]
+    void $ apiCheck (ifMatch' m) [tableName v, k]
                     ["purge" := ("true" :: T.Text)] deleteWith
 
 -- | This lists all the data in the collection within the range given.

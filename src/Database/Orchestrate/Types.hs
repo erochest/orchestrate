@@ -24,8 +24,8 @@ module Database.Orchestrate.Types
     , Limit
     , Offset
     -- ** Conditional API Calls
-    , IfMatch
-    , IfMatch'(..)
+    , IfMatch'
+    , IfMatch(..)
     -- ** Ranges
     , Range
     , RangeEnd(..)
@@ -94,7 +94,7 @@ type Key        = T.Text
 type Ref        = T.Text
 type Timestamp  = Integer
 type Location   = T.Text
-type IfMatch    = Maybe Ref
+type IfMatch'   = Maybe Ref
 type Limit      = Int
 type Offset     = Int
 
@@ -105,10 +105,10 @@ type RestCall a = Options -> String -> IO (Response a)
 -- TODO: flip which one has the prime mark.
 
 -- | A richer type than 'IfMatch' for specifying conditional calls.
-data IfMatch'   = IfMatch Ref       -- ^ Only perform the action if the ref does exist.
-                | IfNoneMatch Ref   -- ^ Only perform the action if the ref does not exist.
-                | NoMatch           -- ^ Always perform the action.
-                deriving (Show)
+data IfMatch = IfMatch Ref       -- ^ Only perform the action if the ref does exist.
+             | IfNoneMatch Ref   -- ^ Only perform the action if the ref does not exist.
+             | NoMatch           -- ^ Always perform the action.
+             deriving (Show)
 
 -- | This is a range tuple. Each end can be specified separately.
 type Range a    = (RangeEnd a, RangeEnd a)

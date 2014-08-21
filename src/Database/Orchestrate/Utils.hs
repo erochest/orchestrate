@@ -251,16 +251,16 @@ envSession = do
 rot :: (a -> b -> c -> d) -> c -> a -> b -> d
 rot f c a b = f a b c
 
--- | Takes an 'IfMatch' and returns a list of request headers.
-ifMatch :: IfMatch -> [Header]
-ifMatch (Just r) = [("If-Match", E.encodeUtf8 r)]
-ifMatch Nothing  = []
-
 -- | Takes an 'IfMatch'' and returns a list of request headers.
 ifMatch' :: IfMatch' -> [Header]
-ifMatch' (IfMatch r)     = [("If-Match",      E.encodeUtf8 r)]
-ifMatch' (IfNoneMatch r) = [("If-None-Match", E.encodeUtf8 r)]
-ifMatch' NoMatch         = []
+ifMatch' (Just r) = [("If-Match", E.encodeUtf8 r)]
+ifMatch' Nothing  = []
+
+-- | Takes an 'IfMatch' and returns a list of request headers.
+ifMatch :: IfMatch -> [Header]
+ifMatch (IfMatch r)     = [("If-Match",      E.encodeUtf8 r)]
+ifMatch (IfNoneMatch r) = [("If-None-Match", E.encodeUtf8 r)]
+ifMatch NoMatch         = []
 
 loc :: Int -> Prism' T.Text T.Text
 loc n = prism' (mappend $ T.replicate (n - 1) "/")
