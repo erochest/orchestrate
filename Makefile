@@ -21,17 +21,23 @@ docs:
 	cabal haddock
 	open dist/doc/html/orchestrate/index.html
 
-# package:
-# build a release tarball or executable
-#
+package:
+	cabal sdist
+
+version:
+	sed -E -i -e 's/(^version: +).*/\1${VERSION}/' orchestrate.cabal
+	sed -E -i -e 's/(^tag: +).*/\1${VERSION}/'     orchestrate.cabal
+	git tag ${VERSION}
+
 # dev:
 # start dev server or process. `vagrant up`, `yesod devel`, etc.
 #
 # install:
 # generate executable and put it into `/usr/local`
-#
-# deploy:
-# prep and push
+
+deploy: test version package
+	cabal upload --check
+	cabal upload --username=${HACKAGE_USER} --password=${HACKAGE_PASS} dist/orchestrate-${VERSION}.tar.gz
 
 clean:
 	cabal clean
@@ -51,4 +57,4 @@ build:
 
 rebuild: clean configure build
 
-.PHONY: all init test run clean distclean configure deps build rebuild
+.PHONY: all init test run clean distclean configure deps build rebuild package version deploy
