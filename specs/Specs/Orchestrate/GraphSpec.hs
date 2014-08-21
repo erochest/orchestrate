@@ -5,6 +5,7 @@
 module Specs.Orchestrate.GraphSpec where
 
 
+import           Control.Error
 import           Control.Exception
 import           Control.Lens
 import           Control.Monad
@@ -36,7 +37,10 @@ spec = describe "Database.Orchestrate.Graph" $ around (withFixtures fixtures) $ 
         it "should create relationships that getRel can retrieve." $ do
             let bertha = fixtures !! 0
                 rene   = fixtures !! 3
-            void . run' $ createRel bertha "brother" rene
+
+            r' <- run $ createRel bertha "brother" rene
+            r' `shouldSatisfy` isRight
+
             r <- run $ getRel bertha "brother" []
             r ^? _Right . resultCount `shouldBe` Just 1
             r ^.. _Right . resultList . traverse . itemValue . personName
