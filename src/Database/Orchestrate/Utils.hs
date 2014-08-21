@@ -74,7 +74,7 @@ import qualified Data.Text.Read               as TR
 import           Network.HTTP.Client          hiding (responseBody)
 import           Network.HTTP.Types
 import           Network.Wreq
-import           Network.Wreq.Types           hiding (auth)
+import           Network.Wreq.Types           hiding (auth, headers, params)
 import           System.Environment
 
 import           Database.Orchestrate.Network
@@ -92,7 +92,7 @@ runO :: Monad m => OrchestrateT m a -> Session -> m (Either Ex.SomeException a)
 runO m s = runO' m $ over sessionOptions (withAuth $ s ^. sessionKey) s
 
 -- | Run an 'OrchestrateT' action with a 'Session' that already includes
--- authentication. 
+-- authentication.
 --
 -- This is the most minimal handler.
 runO' :: Monad m => OrchestrateT m a -> Session -> m (Either Ex.SomeException a)
@@ -113,41 +113,29 @@ withAuth :: APIKey -> Options -> Options
 withAuth key o = o & auth .~ basicAuth (E.encodeUtf8 key) ""
 
 -- | Builds a URL from its assembled parts.
---
--- Wow. What a messy function. Surely there's a better way.
 buildUrl :: Monad m
          => [T.Text]                -- ^ The parts of the URL path. These are joined by @/@.
-         -> [FormParam]             -- ^ The form parameters to append to the URL.
          -> OrchestrateT m String   -- ^ Returns the URL as a 'String'.
-buildUrl paths parms = do
+buildUrl paths = do
     Session{_sessionURL, _sessionVersion} <- ask
-    let url = _sessionURL
-        v   = _sessionVersion
-    let (p, initPath) = initTail paths
-        pbuilder   = maybe mempty textb p
-        parms' = if L.null parms
-                     then pbuilder
-                     else mappend (pbuilder <> "?")
-                            . mconcat
-                            . L.intersperse "&"
-                            . map (uncurry $ jn "=")
-                            . over (traverse . both) B.byteString
-                            $ map toPair parms
-        paths' = foldr (jn "/" . textb) parms' initPath
     return . T.unpack
            . E.decodeUtf8
            . BSL.toStrict
            . B.toLazyByteString
-           $ mconcat [ B.byteString $ E.encodeUtf8 url
-                     , "/v", B.intDec v
-                     , "/", paths'
+           . mconcat
+           . mappend [ textb _sessionURL
+                     , "/v", B.intDec _sessionVersion
+                     , "/"
                      ]
-    where jn j x y = x <> j <> y
-          toPair (k := v) = (k, renderFormValue v)
-          textb = B.byteString . E.encodeUtf8
+           . L.intersperse "/"
+           $ map textb paths
+    where textb = B.byteString . E.encodeUtf8
 
-hPair :: Options -> Header -> Options
-hPair o (k, v) = o & header k .~ [v]
+augmentOptions :: RequestHeaders -> [FormParam] -> Options -> Options
+augmentOptions hdrs pairs o = o & headers .~ hdrs
+                                & params  .~ map pair pairs
+    where bstext        = E.decodeUtf8
+          pair (k := v) = (bstext k, bstext $ renderFormValue v)
 
 -- | This assembles and performs an API call.
 api :: RequestHeaders               -- ^ Additional HTTP headers.
@@ -156,8 +144,8 @@ api :: RequestHeaders               -- ^ Additional HTTP headers.
     -> RestCall a                   -- ^ The wreq function to make the call.
     -> OrchestrateIO (Response a)   -- ^ Returns the call's response.
 api hdrs paths pairs f = do
-    opts <- views sessionOptions $ flip (L.foldl' hPair) hdrs
-    io . f opts =<< buildUrl paths pairs
+    opts <- views sessionOptions $ augmentOptions hdrs pairs
+    io . f opts =<< buildUrl paths
 
 -- | This assembles and peforms an API call, lifting any status code errors
 -- out of the monad and returning them in an explicit 'Either'.
@@ -169,8 +157,8 @@ api' :: RequestHeaders              -- ^ Additional HTTP headers.
                                     -- ^ Returns either the error status or
                                     -- the response.
 api' hdrs paths pairs f = do
-    opts <- views sessionOptions $ flip (L.foldl' hPair) hdrs
-    url  <- buildUrl paths pairs
+    opts <- views sessionOptions $ augmentOptions hdrs pairs
+    url  <- buildUrl paths
     io $ fmap Right (f opts url) `Ex.catch` handler
     where handler (StatusCodeException s _ _) = return $ Left s
           handler e                           = throwIO e
