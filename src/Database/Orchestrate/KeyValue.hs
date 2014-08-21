@@ -10,8 +10,6 @@ Generally, the data stored knows about its own key using via the
 -}
 
 
--- TODO: exchange *V for *KV (should reflect the parameters required).
-
 module Database.Orchestrate.KeyValue
     (
     -- * Data Types

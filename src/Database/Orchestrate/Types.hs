@@ -6,7 +6,6 @@
 {-# OPTIONS_GHC -Wall #-}
 
 
--- TODO: Use types from wreq for params, headers, etc.
 -- TODO: Clean this up some. Eeek.
 
 module Database.Orchestrate.Types
@@ -101,8 +100,6 @@ type Offset     = Int
 -- | This represents a function that makes a call to the Orchestrate API
 -- server. It takes 'Options', a URL 'String', and returns a 'Response'.
 type RestCall a = Options -> String -> IO (Response a)
-
--- TODO: flip which one has the prime mark.
 
 -- | A richer type than 'IfMatch' for specifying conditional calls.
 data IfMatch = IfMatch Ref       -- ^ Only perform the action if the ref does exist.
