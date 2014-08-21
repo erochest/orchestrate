@@ -78,7 +78,7 @@ module Database.Orchestrate.Types
 import           Control.Applicative
 import           Control.Error
 import qualified Control.Exception         as Ex
-import           Control.Lens
+import           Control.Lens              hiding ((.=))
 import           Control.Monad
 import           Control.Monad.Error.Class
 import           Control.Monad.Reader
@@ -210,6 +210,12 @@ instance FromJSON Path where
                          <*> o .: "ref"
     parseJSON _          =   mzero
 
+instance ToJSON Path where
+    toJSON (Path c k r) = object [ "collection" .= c
+                                 , "key"        .= k
+                                 , "ref"        .= r
+                                 ]
+
 -- | A parameterized list of results returned by an API call.
 --
 -- [@i@] the type of the data contained.
@@ -244,3 +250,6 @@ instance (FromJSON p, FromJSON v) => FromJSON (ResultItem p v) where
                          <$> o .: "path"
                          <*> o .: "value"
     parseJSON _          =   mzero
+
+instance (ToJSON p, ToJSON v) => ToJSON (ResultItem p v) where
+    toJSON (ResultItem p v) = object ["path" .= p, "value" .= v]

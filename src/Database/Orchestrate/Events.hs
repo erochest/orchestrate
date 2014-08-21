@@ -45,6 +45,7 @@ import           Control.Applicative
 import           Control.Lens
 import           Control.Monad
 import           Data.Aeson
+import qualified Data.HashMap.Strict        as M
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text                  as T
@@ -73,6 +74,16 @@ instance FromJSON EventPath where
                             <*> o .: "timestamp"
                             <*> o .: "ordinal"
     parseJSON _             =   mzero
+
+instance ToJSON EventPath where
+    toJSON (EventPath p et ts o) =
+        Object $ case toJSON p of
+            Object m -> m `M.union` epm
+            _        -> epm
+        where epm = M.fromList [ ("type",      toJSON et)
+                               , ("timestamp", toJSON ts)
+                               , ("ordinal",   toJSON o)
+                               ]
 
 -- | One item in an 'EventList'.
 --
