@@ -17,9 +17,10 @@ run:
 lint:
 	find src -name \*.hs -exec hlint -v \{\} \;
 
-# docs:
-# generate api documentation
-#
+docs:
+	cabal haddock
+	open dist/doc/html/orchestrate/index.html
+
 # package:
 # build a release tarball or executable
 #
