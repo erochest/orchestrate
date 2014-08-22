@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                orchestrate
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            An API client for http://orchestrate.io/.
 -- description:         
 license:             Apache-2.0
@@ -75,4 +75,4 @@ test-suite orchestrate-specs
 source-repository this
   type:                git
   location:            git://github.com/erochest/orchestrate.git
-  tag:                 0.1.0.0
+  tag:                 0.2.0.0
