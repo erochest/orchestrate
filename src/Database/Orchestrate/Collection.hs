@@ -25,7 +25,6 @@ import           Database.Orchestrate.Utils
 --
 -- > deleteCollection "collection-name"
 
-deleteCollection :: Collection          -- ^ The name of the collection.
-                 -> OrchestrateIO ()
+deleteCollection :: Collection -> OrchestrateIO ()
 deleteCollection c =
     void $ apiCheck [] [c] ["force" := ("true" :: T.Text)] deleteWith

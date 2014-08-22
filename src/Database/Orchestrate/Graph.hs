@@ -5,13 +5,7 @@ This module implements the <http://orchestrate.io/api/graph Graph API>.
 -}
 
 module Database.Orchestrate.Graph
-    (
-    -- * Types
-      RelKind
-    , RelList
-
-    -- * API Functions
-    , getRel
+    ( getRel
     , createRel
     , deleteRel
     ) where
@@ -25,17 +19,6 @@ import           Network.Wreq
 import           Database.Orchestrate.Types
 import           Database.Orchestrate.Utils
 
-
--- | This is the kind of relationship that the graph edge represents.
-type RelKind     = T.Text
-
--- | A list of edges returned by 'getRel'.
---
--- This datatype uses two parameters:
---
--- [@a@] The data type for the edge's origin node.
--- [@b@] The data type for the edge's target node.
-type RelList a b = ResultList (ResultItem Path b)
 
 -- | This retrieves a list of target nodes from edges originating from @a@.
 -- For more information see <http://orchestrate.io/api/graph the API documentation>.

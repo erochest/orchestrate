@@ -10,8 +10,8 @@
 
 module Database.Orchestrate.Types
     (
-    -- * Types
-    -- ** General Aliases
+    -- * General Types
+    -- ** Aliases
       APIKey
     , Collection
     , Key
@@ -29,6 +29,56 @@ module Database.Orchestrate.Types
     , Range
     , RangeEnd(..)
 
+    -- * Key/Value Types
+    , KVList
+
+    -- * Ref Types
+    , TombstoneItem(..)
+
+    -- ** Type Lenses and Prisms
+    , _TombstoneItem
+    , _LiveItem
+    , livePath
+    , liveTime
+    , liveValue
+    , tombstonePath
+    , tombstoneTime
+
+    -- * Event Types
+    -- ** Type Aliases
+    , EventList
+    , EventType
+
+    -- ** Event Location
+    , EventPath(..)
+    , eventPath
+    , eventPathType
+    , eventPathTime
+    , eventPathOrd
+
+    -- ** Event Data
+    , EventItem(..)
+    , eventItem
+    , eventTime
+    , eventOrd
+
+    -- * Graph Types
+    , RelKind
+    , RelList
+
+    -- * Search Types
+    , QueryText
+
+    -- ** List of Search Results
+    , SearchList(..)
+    , searchResults
+    , searchTotal
+
+    -- ** Single Search Result
+    , SearchItem(..)
+    , searchItem
+    , searchScore
+
     -- * Session
     , Session(..)
     , sessionURL
@@ -43,17 +93,6 @@ module Database.Orchestrate.Types
     , OrchestrateT(..)
     , OrchestrateIO
     , Orchestrate
-
-    -- * Type Utilities
-    -- ** Lifting
-    , orchestrateEither
-    , io
-    -- ** Accessing Data
-    , ask
-    , asks
-    -- ** Throwing and Handling Errors
-    , throwError
-    , catchError
 
     -- * Result Types
     -- ** Lists of Results
@@ -71,6 +110,14 @@ module Database.Orchestrate.Types
     , itemCollection
     , itemKey
     , itemRef
+
+    -- * Re-exports
+    -- ** Accessing Data
+    , ask
+    , asks
+    -- ** Throwing and Handling Errors
+    , throwError
+    , catchError
     ) where
 
 
@@ -82,7 +129,9 @@ import           Control.Monad
 import           Control.Monad.Error.Class
 import           Control.Monad.Reader
 import           Data.Aeson
+import           Data.Aeson.Types           (Parser)
 import           Data.Default
+import qualified Data.HashMap.Strict        as M
 import qualified Data.Text                 as T
 import           Network.Wreq
 
@@ -96,6 +145,9 @@ type Location   = T.Text
 type IfMatch'   = Maybe Ref
 type Limit      = Int
 type Offset     = Int
+type EventType  = T.Text
+type RelKind    = T.Text
+type QueryText  = T.Text
 
 -- | This represents a function that makes a call to the Orchestrate API
 -- server. It takes 'Options', a URL 'String', and returns a 'Response'.
@@ -108,7 +160,7 @@ data IfMatch = IfMatch Ref       -- ^ Only perform the action if the ref does ex
              deriving (Show)
 
 -- | This is a range tuple. Each end can be specified separately.
-type Range a    = (RangeEnd a, RangeEnd a)
+type Range a = (RangeEnd a, RangeEnd a)
 
 -- | This represents the end of a range.
 data RangeEnd a = Inclusive a   -- ^ The end should be inclusive. I.e., it should include @a@.
@@ -158,10 +210,6 @@ instance Monad m => MonadReader Session (OrchestrateT m) where
     ask     = OrchestrateT . lift $ ask
     local f = OrchestrateT . local f . runOrchestrate
 
--- | Lifts an IO action into the 'OrchestrateT' monad.
-io :: MonadIO m => IO a -> OrchestrateT m a
-io = OrchestrateT . syncIO
-
 -- TODO: Need to define this for other monad classes.
 
 instance Monad m => MonadError Ex.SomeException (OrchestrateT m) where
@@ -178,11 +226,6 @@ handler' :: Monad m
          -> OrchestrateT m a
 handler' _ (Right v) = return v
 handler' f (Left e)  = f e
-
--- | Lifts an 'Either' value into the 'OrchestrateT' monad.
-orchestrateEither :: Monad m
-                  => Either Ex.SomeException a -> OrchestrateT m a
-orchestrateEither = OrchestrateT . hoistEither
 
 -- | 'OrchestrateT' over 'Identity'. Only the most useless monad ever.
 type Orchestrate   = OrchestrateT Identity
@@ -250,3 +293,154 @@ instance (FromJSON p, FromJSON v) => FromJSON (ResultItem p v) where
 
 instance (ToJSON p, ToJSON v) => ToJSON (ResultItem p v) where
     toJSON (ResultItem p v) = object ["path" .= p, "value" .= v]
+
+-- | The data necessary to access an event.
+data EventPath = EventPath
+               { _eventPath     :: !Path            -- ^ The base 'Path' to this data.
+               , _eventPathType :: !EventType       -- ^ The kind of event.
+               , _eventPathTime :: !Timestamp       -- ^ The event's timestamp.
+               , _eventPathOrd  :: !Int             -- ^ The event's ordinal number.
+               } deriving (Show)
+$(makeLenses ''EventPath)
+
+instance FromJSON EventPath where
+    parseJSON o'@(Object o) =   EventPath
+                            <$> parseJSON o'
+                            <*> o .: "type"
+                            <*> o .: "timestamp"
+                            <*> o .: "ordinal"
+    parseJSON _             =   mzero
+
+instance ToJSON EventPath where
+    toJSON (EventPath p et ts o) =
+        Object $ case toJSON p of
+            Object m -> m `M.union` epm
+            _        -> epm
+        where epm = M.fromList [ ("type",      toJSON et)
+                               , ("timestamp", toJSON ts)
+                               , ("ordinal",   toJSON o)
+                               ]
+
+-- | One item in an 'EventList'.
+--
+-- This data type uses two parameters:
+--
+-- [@a@] The type of data being stored for the event.
+--
+-- [@b@] A phantom type for the type of data associated with the event.
+-- This data must also be stored in Orchestrate using the
+-- "Database.Orchestrate.KeyValue" API.
+data EventItem a b = EventItem
+                   { _eventItem :: !(ResultItem EventPath a)    -- ^ The data itself and the path to it.
+                   , _eventTime :: !Timestamp                   -- ^ The event's timestamp.
+                   , _eventOrd  :: !Int                         -- ^ The event's ordinal number.
+                   } deriving (Show)
+$(makeLenses ''EventItem)
+
+instance FromJSON a => FromJSON (EventItem a b) where
+    parseJSON o'@(Object o) =   EventItem
+                            <$> parseJSON o'
+                            <*> o .: "timestamp"
+                            <*> o .: "ordinal"
+    parseJSON _             =   mzero
+
+-- | 'TombstoneItem' data represents the data values in the database.
+data TombstoneItem v =
+    -- | 'TombstoneItem' data are no longer alive. They are simply markers
+    -- for deleted data.
+      TombstoneItem { _tombstonePath :: !Path       -- ^ The path to the deleted data.
+                    , _tombstoneTime :: !Timestamp  -- ^ The timestamp of this data.
+                    }
+    -- | 'LiveItem' data are still in the database.
+    | LiveItem      { _livePath  :: !Path           -- ^ The path to the data.
+                    , _liveValue :: !(Maybe v)      -- ^ If values are requested,
+                                                    -- this will contain the data.
+                    , _liveTime  :: !Timestamp      -- ^ The timestamp for the data.
+                    }
+                    deriving (Show)
+$(makeLenses ''TombstoneItem)
+
+-- | A 'Prism'' into data created with the 'TombstoneItem' constructor.
+_TombstoneItem :: Prism' (TombstoneItem v) (TombstoneItem v)
+_TombstoneItem = prism' id $ \i ->
+    case i of
+        TombstoneItem{} -> Just i
+        LiveItem{}      -> Nothing
+
+-- | A 'Prism'' into data created with the 'LiveItem' constructor.
+_LiveItem :: Prism' (TombstoneItem v) (TombstoneItem v)
+_LiveItem = prism' id $ \i ->
+    case i of
+        TombstoneItem{} -> Nothing
+        LiveItem{}      -> Just i
+
+emptyObject :: FromJSON v => Maybe Value -> Parser (Maybe v)
+emptyObject (Just o@(Object m)) | M.null m  = return Nothing
+                                | otherwise = parseJSON o
+emptyObject _                               = return Nothing
+
+instance FromJSON v => FromJSON (TombstoneItem v) where
+    parseJSON (Object o) = do
+        let path    = o .:  "path"
+            reftime = o .:  "reftime"
+        (Object p) <- o .:  "path"
+        tombstone  <- p .:? "tombstone"
+        case tombstone of
+            Just (Bool True) -> TombstoneItem <$> path <*> reftime
+            _                -> LiveItem <$> path <*> (emptyObject =<< o .:? "value") <*> reftime
+    parseJSON _          = mzero
+
+-- | A single search item.
+data SearchItem v = SearchItem
+                  { _searchItem  :: !(ResultItem Path v)
+                  -- ^ The path to the item and the item itself.
+                  , _searchScore :: !Double
+                  -- ^ The item's relevancy to the query.
+                  } deriving (Show)
+$(makeLenses ''SearchItem)
+
+instance FromJSON v => FromJSON (SearchItem v) where
+    parseJSON o'@(Object o) =   SearchItem
+                            <$> parseJSON o'
+                            <*> o .: "score"
+    parseJSON _             = mzero
+
+-- | The collection of search results.
+data SearchList v = SearchList
+                  { _searchResults :: !(ResultList (SearchItem v))
+                  -- ^ The list of search results.
+                  , _searchTotal   :: !Int
+                  -- ^ The total number of hits for the search. This may be
+                  -- more than the number of results returned.
+                  } deriving (Show)
+$(makeLenses ''SearchList)
+
+instance FromJSON v => FromJSON (SearchList v) where
+    parseJSON o'@(Object o) =   SearchList
+                            <$> parseJSON o'
+                            <*> o .: "total_count"
+    parseJSON _             = mzero
+
+-- | A list of events returned by 'listEvents'.
+--
+-- This data type uses two parameters:
+--
+-- [@a@] The type of data being stored for the event.
+--
+-- [@b@] A phantom type for the type of data associated with the event.
+-- This data must also be stored in Orchestrate using the
+-- "Database.Orchestrate.KeyValue" API.
+type EventList a b = ResultList (EventItem a b)
+
+-- | A list of edges returned by 'getRel'.
+--
+-- This datatype uses two parameters:
+--
+-- [@a@] The data type for the edge's origin node.
+-- [@b@] The data type for the edge's target node.
+type RelList a b = ResultList (ResultItem Path b)
+
+-- | A list of data returned by 'listV'.
+--
+-- [@v@] The type of the data contained in the list.
+type KVList v = ResultList (ResultItem Path v)

@@ -12,18 +12,14 @@ Generally, the data stored knows about its own key using via the
 
 module Database.Orchestrate.KeyValue
     (
-    -- * Data Types
-      KVList
-
-    -- * API Functions
-    -- ** Accessing Data
-    , lookup
+    -- * Accessing Data
+      lookup
     , listVals
-    -- ** Adding and Updating Data
+    -- * Adding and Updating Data
     , putV
     , putKV
     , postV
-    -- ** Deleting Data
+    -- * Deleting Data
     , deleteV
     , deleteKV
     , purgeV
@@ -154,8 +150,3 @@ listVals c limit (start, end) = apiCheckDecode [] [c] ps getWith
                          , rangeStart "Key" start
                          , rangeEnd   "Key" end
                          ]
-
--- | A list of data returned by 'listV'.
---
--- [@v@] The type of the data contained in the list.
-type KVList v = ResultList (ResultItem Path v)

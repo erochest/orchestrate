@@ -9,9 +9,13 @@
 
 module Database.Orchestrate.Utils
     (
-    -- * Executing 'OrchestrateIO' Actions
+    -- * Type Utilities
+    -- ** Executing 'OrchestrateIO' Actions
       runO
     , runO'
+    -- ** Lifting
+    , orchestrateEither
+    , io
 
     -- * API Infrastructure
     , api
@@ -97,6 +101,15 @@ runO m s = runO' m $ over sessionOptions (withAuth $ s ^. sessionKey) s
 -- This is the most minimal handler.
 runO' :: Monad m => OrchestrateT m a -> Session -> m (Either Ex.SomeException a)
 runO' m = runReaderT (runEitherT $ runOrchestrate m)
+
+-- | Lifts an IO action into the 'OrchestrateT' monad.
+io :: MonadIO m => IO a -> OrchestrateT m a
+io = OrchestrateT . syncIO
+
+-- | Lifts an 'Either' value into the 'OrchestrateT' monad.
+orchestrateEither :: Monad m
+                  => Either Ex.SomeException a -> OrchestrateT m a
+orchestrateEither = OrchestrateT . hoistEither
 
 -- | Create the base Orchestrate API URL given the current 'Session'.
 baseUrl :: Monad m => OrchestrateT m T.Text
