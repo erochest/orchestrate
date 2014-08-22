@@ -26,7 +26,9 @@ package:
 
 version:
 	sed -E -i -e 's/(^version: +).*/\1${VERSION}/' orchestrate.cabal
-	sed -E -i -e 's/(^tag: +).*/\1${VERSION}/'     orchestrate.cabal
+	sed -E -i -e 's/(^ *tag: +).*/\1${VERSION}/'   orchestrate.cabal
+	git add orchestrate.cabal
+	git commit -m "Bumped version ${VERSION}."
 	git tag ${VERSION}
 
 # dev:
@@ -36,7 +38,6 @@ version:
 # generate executable and put it into `/usr/local`
 
 deploy: test version package
-	cabal upload --check
 	cabal upload --username=${HACKAGE_USER} --password=${HACKAGE_PASS} dist/orchestrate-${VERSION}.tar.gz
 
 clean:
