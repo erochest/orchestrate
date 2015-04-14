@@ -72,7 +72,6 @@ test-suite orchestrate-specs
   if flag(network-specs)
     cpp-options: -DNETWORK_SPECS
 
-source-repository this
+source-repository head
   type:                git
   location:            git://github.com/erochest/orchestrate.git
-  tag:                 0.2.0.0
