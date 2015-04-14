@@ -59,7 +59,6 @@ module Database.Orchestrate.Utils
     ) where
 
 
-import           Control.Applicative
 import           Control.Error
 import           Control.Exception            as Ex
 import           Control.Lens
@@ -123,7 +122,7 @@ withAuth' key = withAuth key defaults
 
 -- | Adds the API key to a set of wreq 'Options'.
 withAuth :: APIKey -> Options -> Options
-withAuth key o = o & auth .~ basicAuth (E.encodeUtf8 key) ""
+withAuth key o = o & auth .~ Just (basicAuth (E.encodeUtf8 key) "")
 
 -- | Builds a URL from its assembled parts.
 buildUrl :: Monad m

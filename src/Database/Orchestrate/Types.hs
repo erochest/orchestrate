@@ -121,7 +121,6 @@ module Database.Orchestrate.Types
     ) where
 
 
-import           Control.Applicative
 import           Control.Error
 import qualified Control.Exception         as Ex
 import           Control.Lens              hiding ((.=))
