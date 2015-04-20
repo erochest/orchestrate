@@ -39,6 +39,8 @@ version:
 
 deploy: test version package
 	cabal upload --username=${HACKAGE_USER} --password=${HACKAGE_PASS} dist/orchestrate-${VERSION}.tar.gz
+	git push --all
+	git push --tags
 
 clean:
 	cabal clean
