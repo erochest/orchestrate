@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                orchestrate
-version:             
+version:             0.2.0.1
 synopsis:            An API client for http://orchestrate.io/.
 -- description:         
 license:             Apache-2.0
