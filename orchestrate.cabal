@@ -41,7 +41,7 @@ library
                      , http-types
                      , aeson
                      , unordered-containers
-                     , errors
+                     , errors < 2.0
                      , either
                      , mtl
                      , lens
