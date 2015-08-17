@@ -29,6 +29,8 @@ checkResponse = checkStatusCode . view (responseStatus . statusCode)
 -- else is bad. Bad codes throw an exception in 'OrchestrateT'.
 checkStatusCode :: Monad m => Int -> OrchestrateT m ()
 checkStatusCode 200 = return ()
+checkStatusCode 201 = return ()
+checkStatusCode 202 = return ()
 checkStatusCode 204 = return ()
 checkStatusCode rc  = throwError
                     . Ex.SomeException
