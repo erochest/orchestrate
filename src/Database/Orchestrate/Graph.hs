@@ -13,6 +13,7 @@ module Database.Orchestrate.Graph
 
 import           Control.Monad
 import           Data.Aeson
+import qualified Data.HashMap.Strict        as M
 import qualified Data.Text                  as T
 import           Network.Wreq
 
@@ -49,7 +50,7 @@ createRel :: (OrchestrateData a, OrchestrateData b)
           -> RelKind            -- ^ The label for the edge.
           -> b                  -- ^ The target, destination node.
           -> OrchestrateIO ()
-createRel from rel to = void $ apiCheck [] url [] $ \o s -> putWith o s Null
+createRel from rel to = void $ apiCheck [] url [] $ \o s -> putWith o s (Object M.empty)
     where url = [ tableName from , dataKey from
                 , "relation", rel
                 , tableName to, dataKey to
