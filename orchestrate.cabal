@@ -57,6 +57,14 @@ test-suite orchestrate-specs
   ghc-options:         -threaded -rtsopts
   hs-source-dirs:      specs
   main-is:             Specs.hs
+  other-modules:         Specs.Orchestrate.EventSpec
+                       , Specs.Orchestrate.GraphSpec
+                       , Specs.Orchestrate.KeyValueSpec
+                       , Specs.Orchestrate.RefSpec
+                       , Specs.Orchestrate.SearchSpec
+                       , Specs.Orchestrate.Spec.Types
+                       , Specs.Orchestrate.Spec.Utils
+                       , Specs.Orchestrate.UtilsSpec
   build-depends:         base
                        , orchestrate
                        , QuickCheck >=2.8 && <2.9
