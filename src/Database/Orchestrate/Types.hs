@@ -196,7 +196,7 @@ class (ToJSON a, FromJSON a) => OrchestrateData a where
 -- 'Session' data with error handling using 'EitherT' 'Ex.SomeException'.
 newtype OrchestrateT m a
     = OrchestrateT
-    { runOrchestrate :: EitherT Ex.SomeException (ReaderT Session m) a }
+    { runOrchestrate :: ExceptT Ex.SomeException (ReaderT Session m) a }
     deriving (Functor, Applicative, Monad)
 
 instance MonadTrans OrchestrateT where
@@ -212,11 +212,11 @@ instance Monad m => MonadReader Session (OrchestrateT m) where
 -- TODO: Need to define this for other monad classes.
 
 instance Monad m => MonadError Ex.SomeException (OrchestrateT m) where
-    throwError = OrchestrateT . EitherT . return . Left
+    throwError = OrchestrateT . ExceptT . return . Left
     catchError a handler =   join
                          .   fmap (handler' handler)
                          .   lift
-                         .   runReaderT (runEitherT $ runOrchestrate a)
+                         .   runReaderT (runExceptT $ runOrchestrate a)
                          =<< ask
 
 handler' :: Monad m

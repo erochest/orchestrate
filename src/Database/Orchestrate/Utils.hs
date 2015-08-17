@@ -99,7 +99,7 @@ runO m s = runO' m $ over sessionOptions (withAuth $ s ^. sessionKey) s
 --
 -- This is the most minimal handler.
 runO' :: Monad m => OrchestrateT m a -> Session -> m (Either Ex.SomeException a)
-runO' m = runReaderT (runEitherT $ runOrchestrate m)
+runO' m = runReaderT (runExceptT $ runOrchestrate m)
 
 -- | Lifts an IO action into the 'OrchestrateT' monad.
 io :: MonadIO m => IO a -> OrchestrateT m a
