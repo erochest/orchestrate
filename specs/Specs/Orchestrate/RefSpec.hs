@@ -50,10 +50,10 @@ spec = describe "Database.Orchestrate.Ref" $ do
 
     describe "decoding ResultList (TombstoneItem Person)." $ do
         it "should work." $ do
-            r <- (eitherDecode <$> BS.readFile "data.json") :: IO (Either String (ResultList (TombstoneItem Person)))
+            r <- (eitherDecode <$> BS.readFile "specs/data.json") :: IO (Either String (ResultList (TombstoneItem Person)))
             r `shouldSatisfy` isRight
 
-    describe "listRefs" $ around withCats $ do
+    describe "listRefs" $ around_ withCats $ do
         it "returns a list of references for an object." $ do
             refs <- runRefList $ listRefs "test-coll" "elsa" Nothing Nothing False
             refs ^? _Right . resultCount `shouldBe` Just 7

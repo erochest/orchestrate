@@ -32,7 +32,7 @@ fixtures = [ Person "Bertha"    1    -- 0
 
 #if NETWORK_SPECS
 spec :: Spec
-spec = describe "Database.Orchestrate.Graph" $ around (withFixtures fixtures) $ do
+spec = describe "Database.Orchestrate.Graph" $ around_ (withFixtures fixtures) $ do
     describe "createRel and getRel" $
         it "should create relationships that getRel can retrieve." $ do
             let bertha = fixtures !! 0

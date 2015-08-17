@@ -69,7 +69,7 @@ allNames = _Right . searchResults . resultList . traverse . searchItem . itemVal
 
 #if NETWORK_SPECS
 spec :: Spec
-spec = describe "Database.Orchestrate.Search" $ around (withFixtures fixtures) $
+spec = describe "Database.Orchestrate.Search" $ around_ (withFixtures fixtures) $
     describe "query" $ do
         it "should search for all fields." $ do
             s <- runSearch $ query "test-coll" "darth" Nothing Nothing

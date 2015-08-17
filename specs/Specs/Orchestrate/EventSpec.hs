@@ -69,7 +69,7 @@ eithererr loc = orchestrateEither
 
 #if NETWORK_SPECS
 spec :: Spec
-spec = describe "Database.Orchestrate.Events" $ around (withFixtures fixtures) $ do
+spec = describe "Database.Orchestrate.Events" $ around_ (withFixtures fixtures) $ do
     describe "createEvent" $
         it "should create events." $
             withEvents' (fixtures !! 1) "create" events $ \locs -> do
@@ -113,7 +113,7 @@ spec = describe "Database.Orchestrate.Events" $ around (withFixtures fixtures) $
                              >>= getEvent p "test" ts) :: GetEvent
             e' `shouldSatisfy` isNothing
 
-    describe "listEvents" $ around (withEvents (head fixtures) "list" events) $ do
+    describe "listEvents" $ around_ (withEvents (head fixtures) "list" events) $ do
         it "should return all events" $ do
             elist <- run $ listEvents (head fixtures) "list" Nothing (Open, Open)
             elist ^? _Right . resultCount `shouldBe` Just (length events)
